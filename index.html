@@ -1,0 +1,1325 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>BKRY Solver v1.3 Global Edition</title>
+<style>
+  :root { color-scheme: dark; }
+  body{
+    font-family:Arial,sans-serif;
+    max-width:980px;
+    margin:24px auto;
+    padding:0 16px;
+    background:#111;
+    color:#eee
+  }
+  h1{margin-bottom:4px}
+  .sub{color:#bbb;margin-top:0}
+  .topbar{display:flex;align-items:flex-start;justify-content:space-between;gap:16px}
+  .langbox{min-width:160px}
+  .panel{
+    background:#1b1b1b;
+    border:1px solid #333;
+    border-radius:12px;
+    padding:16px;
+    margin:16px 0
+  }
+  .counts{
+    display:grid;
+    grid-template-columns:repeat(5,minmax(90px,1fr));
+    gap:10px
+  }
+  label{display:block;font-size:14px;color:#ccc}
+  input,select,button{
+    font-size:16px;
+    border-radius:8px;
+    border:1px solid #444;
+    padding:9px;
+    background:#222;
+    color:#fff
+  }
+  input,select{width:100%;box-sizing:border-box}
+  button{cursor:pointer;margin-right:8px;margin-top:8px}
+  button.primary{background:#3a3a3a;font-weight:bold}
+  .grid{
+    display:grid;
+    grid-template-columns:repeat(7,52px);
+    gap:5px;
+    margin:16px 0
+  }
+  .cell{
+    width:52px;
+    height:52px;
+    border-radius:10px;
+    border:1px solid #555;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:27px;
+    background:#222
+  }
+  .E{opacity:.18}
+  .R{background:#6d2020}
+  .Y{background:#796d17}
+  .G{background:#1d5e2a}
+  .P{background:#5c2b70}
+  .B{background:#214f7a}
+  .bonus{
+    padding:7px 10px;
+    border-radius:7px;
+    background:#222;
+    margin:5px 0
+  }
+  .on{border-left:5px solid #8fd18f}
+  .off{opacity:.4;border-left:5px solid #555}
+  textarea{
+    width:100%;
+    height:210px;
+    background:#161616;
+    color:#eee;
+    border:1px solid #444;
+    border-radius:8px;
+    padding:10px;
+    box-sizing:border-box
+  }
+  .note{color:#bbb;font-size:14px;line-height:1.45}
+  .status{margin-top:10px;color:#cfcfcf}
+  @media(max-width:560px){
+    .topbar{flex-direction:column}
+    .langbox{width:100%}
+    .counts{grid-template-columns:repeat(2,1fr)}
+    .grid{grid-template-columns:repeat(7,39px)}
+    .cell{width:39px;height:39px;font-size:22px}
+  }
+</style>
+</head>
+<body>
+<div class="topbar">
+  <div>
+    <h1>BKRY Solver v1.3 Global Edition</h1>
+    <p class="sub" id="subtitle">7 × 5 Heldenstein-Optimierer für Puzzles & Chaos</p>
+  </div>
+  <div class="langbox">
+    <label for="languageSelect" id="languageLabel">Sprache</label>
+    <select id="languageSelect">
+      <option value="de">DE – Deutsch</option>
+      <option value="en">EN – English</option>
+      <option value="ru">RU – Русский</option>
+      <option value="es">ES – Español</option>
+      <option value="pt">PT – Português</option>
+      <option value="fr">FR – Français</option>
+      <option value="it">IT – Italiano</option>
+      <option value="nl">NL – Nederlands</option>
+      <option value="pl">PL – Polski</option>
+      <option value="tr">TR – Türkçe</option>
+      <option value="sv">SV – Svenska</option>
+      <option value="ko">KO – 한국어</option>
+      <option value="ja">JA – 日本語</option>
+      <option value="zh">ZH – 简体中文</option>
+    </select>
+  </div>
+</div>
+
+<div class="panel">
+  <h2 id="stonesTitle">Steine</h2>
+
+  <div class="counts">
+    <label>🟥 <span id="redLabel">Rot</span>
+      <input id="R" type="number" min="0" max="35" value="5">
+    </label>
+    <label>🟨 <span id="yellowLabel">Gelb</span>
+      <input id="Y" type="number" min="0" max="35" value="7">
+    </label>
+    <label>🟩 <span id="greenLabel">Grün</span>
+      <input id="G" type="number" min="0" max="35" value="6">
+    </label>
+    <label>🟪 <span id="purpleLabel">Lila</span>
+      <input id="P" type="number" min="0" max="35" value="4">
+    </label>
+    <label>🟦 <span id="blueLabel">Blau</span>
+      <input id="B" type="number" min="0" max="35" value="3">
+    </label>
+  </div>
+
+  <p>
+    <label><span id="mainTroopLabel">Haupttruppe</span>
+      <select id="profile">
+        <option value="cav" id="profileCav">Kavallerie</option>
+        <option value="arch" id="profileArch">Bogenschützen</option>
+        <option value="inf" id="profileInf">Infanterie</option>
+        <option value="all" id="profileAll">Ausgewogen / maximale Gesamtsumme</option>
+      </select>
+    </label>
+  </p>
+
+  <button class="primary" id="solveButton">Optimieren</button>
+  <button id="copyButton">Discord-Text kopieren</button>
+  <div id="status" class="status"></div>
+</div>
+
+<div class="panel">
+  <h2 id="bestLayoutTitle">Beste gefundene Anordnung</h2>
+  <div id="score"></div>
+  <div id="grid" class="grid"></div>
+  <div id="bonuses"></div>
+</div>
+
+<div class="panel">
+  <h2 id="discordOutputTitle">Discord-Ausgabe</h2>
+  <textarea id="share" readonly></textarea>
+  <p class="note" id="solverNote">
+    Der Solver verwendet stochastisches Hill-Climbing mit bis zu 10 zufälligen Neustarts.
+    Die Suche wird spätestens nach 500 Millisekunden beendet.
+  </p>
+</div>
+
+<script>
+"use strict";
+
+
+const translations = {
+  "de": {
+    "subtitle": "7 × 5 Heldenstein-Optimierer für Puzzles & Chaos",
+    "language": "Sprache",
+    "stones": "Steine",
+    "red": "Rot",
+    "yellow": "Gelb",
+    "green": "Grün",
+    "purple": "Lila",
+    "blue": "Blau",
+    "mainTroop": "Haupttruppe",
+    "cavalry": "Kavallerie",
+    "archers": "Bogenschützen",
+    "infantry": "Infanterie",
+    "balanced": "Ausgewogen / maximale Gesamtsumme",
+    "optimize": "Optimieren",
+    "copy": "Discord-Text kopieren",
+    "bestLayout": "Beste gefundene Anordnung",
+    "discordOutput": "Discord-Ausgabe",
+    "note": "Der Solver verwendet stochastisches Hill-Climbing mit bis zu 10 zufälligen Neustarts. Die Suche wird spätestens nach 500 Millisekunden beendet.",
+    "activeBonuses": "Aktive Boni",
+    "activePercent": "Aktive Prozent-Summe",
+    "profileScore": "Profilwertung",
+    "overview": "Bonusübersicht",
+    "optimizing": "Optimiere…",
+    "copied": "Discord-Text wurde in die Zwischenablage kopiert.",
+    "tooMany": "Es sind mehr als 35 Steine eingetragen.",
+    "invalid": "Ungültige Anzahl bei",
+    "noLayout": "Es konnte keine gültige Anordnung erzeugt werden.",
+    "finished": "Berechnung beendet nach {ms} ms, {restarts} Restarts und {iterations} geprüften Tauschaktionen.",
+    "archerDef10V": "Bogenschützen-VER +10%",
+    "infDef10V": "Infanterie-VER +10%",
+    "cavDef10V": "Kavallerie-VER +10%",
+    "troopDef5V": "Truppen-VER +5% (vertikal)",
+    "troopHp5V": "Truppen-LP +5% (vertikal)",
+    "archerHp10H": "Bogenschützen-LP +10%",
+    "infHp10H": "Infanterie-LP +10%",
+    "cavHp10H": "Kavallerie-LP +10%",
+    "troopDef5H": "Truppen-VER +5% (horizontal)",
+    "troopHp5H": "Truppen-LP +5% (horizontal)",
+    "archerAtk20V": "Bogenschützen-ANG +20% (vertikal)",
+    "infAtk20V": "Infanterie-ANG +20% (vertikal)",
+    "cavAtk20V": "Kavallerie-ANG +20% (vertikal)",
+    "troopDef20V": "Truppen-VER +20% (vertikal)",
+    "troopHp20V": "Truppen-LP +20% (vertikal)",
+    "archerAtk20H": "Bogenschützen-ANG +20% (horizontal)",
+    "infAtk20H": "Infanterie-ANG +20% (horizontal)",
+    "cavAtk20H": "Kavallerie-ANG +20% (horizontal)",
+    "troopDef20H": "Truppen-VER +20% (horizontal)",
+    "troopHp20H": "Truppen-LP +20% (horizontal)"
+  },
+  "en": {
+    "subtitle": "7 × 5 Hero Stone Optimizer for Puzzles & Chaos",
+    "language": "Language",
+    "stones": "Stones",
+    "red": "Red",
+    "yellow": "Yellow",
+    "green": "Green",
+    "purple": "Purple",
+    "blue": "Blue",
+    "mainTroop": "Main troop type",
+    "cavalry": "Cavalry",
+    "archers": "Archers",
+    "infantry": "Infantry",
+    "balanced": "Balanced / maximum total bonus",
+    "optimize": "Optimize",
+    "copy": "Copy Discord text",
+    "bestLayout": "Best layout found",
+    "discordOutput": "Discord output",
+    "note": "The solver uses stochastic hill climbing with up to 10 random restarts. The search always stops after no more than 500 milliseconds.",
+    "activeBonuses": "Active bonuses",
+    "activePercent": "Active percentage total",
+    "profileScore": "Profile score",
+    "overview": "Bonus overview",
+    "optimizing": "Optimizing…",
+    "copied": "Discord text copied to the clipboard.",
+    "tooMany": "More than 35 stones were entered.",
+    "invalid": "Invalid amount for",
+    "noLayout": "No valid layout could be generated.",
+    "finished": "Calculation finished after {ms} ms, {restarts} restarts and {iterations} tested swaps.",
+    "archerDef10V": "Archer DEF +10%",
+    "infDef10V": "Infantry DEF +10%",
+    "cavDef10V": "Cavalry DEF +10%",
+    "troopDef5V": "Troop DEF +5% (vertical)",
+    "troopHp5V": "Troop HP +5% (vertical)",
+    "archerHp10H": "Archer HP +10%",
+    "infHp10H": "Infantry HP +10%",
+    "cavHp10H": "Cavalry HP +10%",
+    "troopDef5H": "Troop DEF +5% (horizontal)",
+    "troopHp5H": "Troop HP +5% (horizontal)",
+    "archerAtk20V": "Archer ATK +20% (vertical)",
+    "infAtk20V": "Infantry ATK +20% (vertical)",
+    "cavAtk20V": "Cavalry ATK +20% (vertical)",
+    "troopDef20V": "Troop DEF +20% (vertical)",
+    "troopHp20V": "Troop HP +20% (vertical)",
+    "archerAtk20H": "Archer ATK +20% (horizontal)",
+    "infAtk20H": "Infantry ATK +20% (horizontal)",
+    "cavAtk20H": "Cavalry ATK +20% (horizontal)",
+    "troopDef20H": "Troop DEF +20% (horizontal)",
+    "troopHp20H": "Troop HP +20% (horizontal)"
+  },
+  "ru": {
+    "subtitle": "Оптимизатор камней героя 7 × 5 для Puzzles & Chaos",
+    "language": "Язык",
+    "stones": "Камни",
+    "red": "Красный",
+    "yellow": "Жёлтый",
+    "green": "Зелёный",
+    "purple": "Фиолетовый",
+    "blue": "Синий",
+    "mainTroop": "Основной тип войск",
+    "cavalry": "Кавалерия",
+    "archers": "Стрелки",
+    "infantry": "Пехота",
+    "balanced": "Сбалансировано / максимальный общий бонус",
+    "optimize": "Оптимизировать",
+    "copy": "Скопировать текст для Discord",
+    "bestLayout": "Лучшее найденное расположение",
+    "discordOutput": "Вывод для Discord",
+    "note": "Оптимизатор использует стохастический подъём с максимум 10 случайными перезапусками. Поиск всегда завершается не позднее чем через 500 миллисекунд.",
+    "activeBonuses": "Активные бонусы",
+    "activePercent": "Сумма активных процентов",
+    "profileScore": "Оценка профиля",
+    "overview": "Обзор бонусов",
+    "optimizing": "Оптимизация…",
+    "copied": "Текст для Discord скопирован в буфер обмена.",
+    "tooMany": "Введено больше 35 камней.",
+    "invalid": "Недопустимое количество для",
+    "noLayout": "Не удалось создать допустимое расположение.",
+    "finished": "Расчёт завершён за {ms} мс, {restarts} перезапусков и {iterations} проверенных обменов.",
+    "archerDef10V": "Защита стрелков +10%",
+    "infDef10V": "Защита пехоты +10%",
+    "cavDef10V": "Защита кавалерии +10%",
+    "troopDef5V": "Защита войск +5% (вертикально)",
+    "troopHp5V": "ОЗ войск +5% (вертикально)",
+    "archerHp10H": "ОЗ стрелков +10%",
+    "infHp10H": "ОЗ пехоты +10%",
+    "cavHp10H": "ОЗ кавалерии +10%",
+    "troopDef5H": "Защита войск +5% (горизонтально)",
+    "troopHp5H": "ОЗ войск +5% (горизонтально)",
+    "archerAtk20V": "Атака стрелков +20% (вертикально)",
+    "infAtk20V": "Атака пехоты +20% (вертикально)",
+    "cavAtk20V": "Атака кавалерии +20% (вертикально)",
+    "troopDef20V": "Защита войск +20% (вертикально)",
+    "troopHp20V": "ОЗ войск +20% (вертикально)",
+    "archerAtk20H": "Атака стрелков +20% (горизонтально)",
+    "infAtk20H": "Атака пехоты +20% (горизонтально)",
+    "cavAtk20H": "Атака кавалерии +20% (горизонтально)",
+    "troopDef20H": "Защита войск +20% (горизонтально)",
+    "troopHp20H": "ОЗ войск +20% (горизонтально)"
+  },
+  "es": {
+    "subtitle": "Optimizador de piedras de héroe 7 × 5 para Puzzles & Chaos",
+    "language": "Idioma",
+    "stones": "Piedras",
+    "red": "Rojo",
+    "yellow": "Amarillo",
+    "green": "Verde",
+    "purple": "Morado",
+    "blue": "Azul",
+    "mainTroop": "Tipo de tropa principal",
+    "cavalry": "Caballería",
+    "archers": "Arqueros",
+    "infantry": "Infantería",
+    "balanced": "Equilibrado / bonificación total máxima",
+    "optimize": "Optimizar",
+    "copy": "Copiar texto para Discord",
+    "bestLayout": "Mejor disposición encontrada",
+    "discordOutput": "Salida para Discord",
+    "note": "The solver uses stochastic hill climbing with up to 10 random restarts. The search always stops after no more than 500 milliseconds.",
+    "activeBonuses": "Bonificaciones activas",
+    "activePercent": "Suma porcentual activa",
+    "profileScore": "Puntuación del perfil",
+    "overview": "Resumen de bonificaciones",
+    "optimizing": "Optimizando…",
+    "copied": "Texto de Discord copiado al portapapeles.",
+    "tooMany": "Se introdujeron más de 35 piedras.",
+    "invalid": "Cantidad no válida para",
+    "noLayout": "No se pudo generar una disposición válida.",
+    "finished": "Cálculo terminado en {ms} ms, con {restarts} reinicios y {iterations} intercambios probados.",
+    "archerDef10V": "DEF de arqueros +10%",
+    "infDef10V": "DEF de infantería +10%",
+    "cavDef10V": "DEF de caballería +10%",
+    "troopDef5V": "DEF de tropas +5% (vertical)",
+    "troopHp5V": "PV de tropas +5% (vertical)",
+    "archerHp10H": "PV de arqueros +10%",
+    "infHp10H": "PV de infantería +10%",
+    "cavHp10H": "PV de caballería +10%",
+    "troopDef5H": "DEF de tropas +5% (horizontal)",
+    "troopHp5H": "PV de tropas +5% (horizontal)",
+    "archerAtk20V": "ATQ de arqueros +20% (vertical)",
+    "infAtk20V": "ATQ de infantería +20% (vertical)",
+    "cavAtk20V": "ATQ de caballería +20% (vertical)",
+    "troopDef20V": "DEF de tropas +20% (vertical)",
+    "troopHp20V": "PV de tropas +20% (vertical)",
+    "archerAtk20H": "ATQ de arqueros +20% (horizontal)",
+    "infAtk20H": "ATQ de infantería +20% (horizontal)",
+    "cavAtk20H": "ATQ de caballería +20% (horizontal)",
+    "troopDef20H": "DEF de tropas +20% (horizontal)",
+    "troopHp20H": "PV de tropas +20% (horizontal)"
+  },
+  "pt": {
+    "subtitle": "Otimizador de pedras de herói 7 × 5 para Puzzles & Chaos",
+    "language": "Idioma",
+    "stones": "Pedras",
+    "red": "Vermelho",
+    "yellow": "Amarelo",
+    "green": "Verde",
+    "purple": "Roxo",
+    "blue": "Azul",
+    "mainTroop": "Tipo de tropa principal",
+    "cavalry": "Cavalaria",
+    "archers": "Arqueiros",
+    "infantry": "Infantaria",
+    "balanced": "Equilibrado / bônus total máximo",
+    "optimize": "Otimizar",
+    "copy": "Copiar texto para Discord",
+    "bestLayout": "Melhor disposição encontrada",
+    "discordOutput": "Saída para Discord",
+    "note": "The solver uses stochastic hill climbing with up to 10 random restarts. The search always stops after no more than 500 milliseconds.",
+    "activeBonuses": "Bônus ativos",
+    "activePercent": "Soma percentual ativa",
+    "profileScore": "Pontuação do perfil",
+    "overview": "Visão geral dos bônus",
+    "optimizing": "Otimizando…",
+    "copied": "Texto do Discord copiado para a área de transferência.",
+    "tooMany": "Foram inseridas mais de 35 pedras.",
+    "invalid": "Quantidade inválida para",
+    "noLayout": "Não foi possível gerar uma disposição válida.",
+    "finished": "Cálculo concluído em {ms} ms, com {restarts} reinícios e {iterations} trocas testadas.",
+    "archerDef10V": "DEF dos arqueiros +10%",
+    "infDef10V": "DEF da infantaria +10%",
+    "cavDef10V": "DEF da cavalaria +10%",
+    "troopDef5V": "DEF das tropas +5% (vertical)",
+    "troopHp5V": "PV das tropas +5% (vertical)",
+    "archerHp10H": "PV dos arqueiros +10%",
+    "infHp10H": "PV da infantaria +10%",
+    "cavHp10H": "PV da cavalaria +10%",
+    "troopDef5H": "DEF das tropas +5% (horizontal)",
+    "troopHp5H": "PV das tropas +5% (horizontal)",
+    "archerAtk20V": "ATQ dos arqueiros +20% (vertical)",
+    "infAtk20V": "ATQ da infantaria +20% (vertical)",
+    "cavAtk20V": "ATQ da cavalaria +20% (vertical)",
+    "troopDef20V": "DEF das tropas +20% (vertical)",
+    "troopHp20V": "PV das tropas +20% (vertical)",
+    "archerAtk20H": "ATQ dos arqueiros +20% (horizontal)",
+    "infAtk20H": "ATQ da infantaria +20% (horizontal)",
+    "cavAtk20H": "ATQ da cavalaria +20% (horizontal)",
+    "troopDef20H": "DEF das tropas +20% (horizontal)",
+    "troopHp20H": "PV das tropas +20% (horizontal)"
+  },
+  "fr": {
+    "subtitle": "Optimiseur de pierres de héros 7 × 5 pour Puzzles & Chaos",
+    "language": "Langue",
+    "stones": "Pierres",
+    "red": "Rouge",
+    "yellow": "Jaune",
+    "green": "Vert",
+    "purple": "Violet",
+    "blue": "Bleu",
+    "mainTroop": "Type de troupe principal",
+    "cavalry": "Cavalerie",
+    "archers": "Archers",
+    "infantry": "Infanterie",
+    "balanced": "Équilibré / bonus total maximal",
+    "optimize": "Optimiser",
+    "copy": "Copier le texte Discord",
+    "bestLayout": "Meilleure disposition trouvée",
+    "discordOutput": "Sortie Discord",
+    "note": "The solver uses stochastic hill climbing with up to 10 random restarts. The search always stops after no more than 500 milliseconds.",
+    "activeBonuses": "Bonus actifs",
+    "activePercent": "Somme des pourcentages actifs",
+    "profileScore": "Score du profil",
+    "overview": "Aperçu des bonus",
+    "optimizing": "Optimisation…",
+    "copied": "Texte Discord copié dans le presse-papiers.",
+    "tooMany": "Plus de 35 pierres ont été saisies.",
+    "invalid": "Quantité invalide pour",
+    "noLayout": "Aucune disposition valide n’a pu être générée.",
+    "finished": "Calcul terminé en {ms} ms, avec {restarts} redémarrages et {iterations} échanges testés.",
+    "archerDef10V": "DÉF des archers +10%",
+    "infDef10V": "DÉF de l’infanterie +10%",
+    "cavDef10V": "DÉF de la cavalerie +10%",
+    "troopDef5V": "DÉF des troupes +5% (vertical)",
+    "troopHp5V": "PV des troupes +5% (vertical)",
+    "archerHp10H": "PV des archers +10%",
+    "infHp10H": "PV de l’infanterie +10%",
+    "cavHp10H": "PV de la cavalerie +10%",
+    "troopDef5H": "DÉF des troupes +5% (horizontal)",
+    "troopHp5H": "PV des troupes +5% (horizontal)",
+    "archerAtk20V": "ATQ des archers +20% (vertical)",
+    "infAtk20V": "ATQ de l’infanterie +20% (vertical)",
+    "cavAtk20V": "ATQ de la cavalerie +20% (vertical)",
+    "troopDef20V": "DÉF des troupes +20% (vertical)",
+    "troopHp20V": "PV des troupes +20% (vertical)",
+    "archerAtk20H": "ATQ des archers +20% (horizontal)",
+    "infAtk20H": "ATQ de l’infanterie +20% (horizontal)",
+    "cavAtk20H": "ATQ de la cavalerie +20% (horizontal)",
+    "troopDef20H": "DÉF des troupes +20% (horizontal)",
+    "troopHp20H": "PV des troupes +20% (horizontal)"
+  },
+  "it": {
+    "subtitle": "Ottimizzatore di pietre eroe 7 × 5 per Puzzles & Chaos",
+    "language": "Lingua",
+    "stones": "Pietre",
+    "red": "Rosso",
+    "yellow": "Giallo",
+    "green": "Verde",
+    "purple": "Viola",
+    "blue": "Blu",
+    "mainTroop": "Tipo di truppa principale",
+    "cavalry": "Cavalleria",
+    "archers": "Arcieri",
+    "infantry": "Fanteria",
+    "balanced": "Bilanciato / bonus totale massimo",
+    "optimize": "Ottimizza",
+    "copy": "Copia testo Discord",
+    "bestLayout": "Migliore disposizione trovata",
+    "discordOutput": "Output Discord",
+    "note": "The solver uses stochastic hill climbing with up to 10 random restarts. The search always stops after no more than 500 milliseconds.",
+    "activeBonuses": "Bonus attivi",
+    "activePercent": "Somma percentuale attiva",
+    "profileScore": "Punteggio profilo",
+    "overview": "Panoramica bonus",
+    "optimizing": "Ottimizzazione…",
+    "copied": "Testo Discord copiato negli appunti.",
+    "tooMany": "Sono state inserite più di 35 pietre.",
+    "invalid": "Quantità non valida per",
+    "noLayout": "Non è stato possibile generare una disposizione valida.",
+    "finished": "Calcolo completato in {ms} ms, con {restarts} riavvii e {iterations} scambi testati.",
+    "archerDef10V": "DIF arcieri +10%",
+    "infDef10V": "DIF fanteria +10%",
+    "cavDef10V": "DIF cavalleria +10%",
+    "troopDef5V": "DIF truppe +5% (verticale)",
+    "troopHp5V": "PS truppe +5% (verticale)",
+    "archerHp10H": "PS arcieri +10%",
+    "infHp10H": "PS fanteria +10%",
+    "cavHp10H": "PS cavalleria +10%",
+    "troopDef5H": "DIF truppe +5% (orizzontale)",
+    "troopHp5H": "PS truppe +5% (orizzontale)",
+    "archerAtk20V": "ATT arcieri +20% (verticale)",
+    "infAtk20V": "ATT fanteria +20% (verticale)",
+    "cavAtk20V": "ATT cavalleria +20% (verticale)",
+    "troopDef20V": "DIF truppe +20% (verticale)",
+    "troopHp20V": "PS truppe +20% (verticale)",
+    "archerAtk20H": "ATT arcieri +20% (orizzontale)",
+    "infAtk20H": "ATT fanteria +20% (orizzontale)",
+    "cavAtk20H": "ATT cavalleria +20% (orizzontale)",
+    "troopDef20H": "DIF truppe +20% (orizzontale)",
+    "troopHp20H": "PS truppe +20% (orizzontale)"
+  },
+  "nl": {
+    "subtitle": "7 × 5 heldensteen-optimalisator voor Puzzles & Chaos",
+    "language": "Taal",
+    "stones": "Stenen",
+    "red": "Rood",
+    "yellow": "Geel",
+    "green": "Groen",
+    "purple": "Paars",
+    "blue": "Blauw",
+    "mainTroop": "Belangrijkste troepentype",
+    "cavalry": "Cavalerie",
+    "archers": "Boogschutters",
+    "infantry": "Infanterie",
+    "balanced": "Gebalanceerd / maximale totale bonus",
+    "optimize": "Optimaliseren",
+    "copy": "Discord-tekst kopiëren",
+    "bestLayout": "Beste gevonden indeling",
+    "discordOutput": "Discord-uitvoer",
+    "note": "The solver uses stochastic hill climbing with up to 10 random restarts. The search always stops after no more than 500 milliseconds.",
+    "activeBonuses": "Actieve bonussen",
+    "activePercent": "Actieve procentuele som",
+    "profileScore": "Profielscore",
+    "overview": "Bonusoverzicht",
+    "optimizing": "Optimaliseren…",
+    "copied": "Discord-tekst naar het klembord gekopieerd.",
+    "tooMany": "Er zijn meer dan 35 stenen ingevoerd.",
+    "invalid": "Ongeldig aantal voor",
+    "noLayout": "Er kon geen geldige indeling worden gemaakt.",
+    "finished": "Berekening voltooid in {ms} ms, met {restarts} herstarts en {iterations} geteste wissels.",
+    "archerDef10V": "Boogschutter DEF +10%",
+    "infDef10V": "Infanterie DEF +10%",
+    "cavDef10V": "Cavalerie DEF +10%",
+    "troopDef5V": "Troepen DEF +5% (verticaal)",
+    "troopHp5V": "Troepen HP +5% (verticaal)",
+    "archerHp10H": "Boogschutter HP +10%",
+    "infHp10H": "Infanterie HP +10%",
+    "cavHp10H": "Cavalerie HP +10%",
+    "troopDef5H": "Troepen DEF +5% (horizontaal)",
+    "troopHp5H": "Troepen HP +5% (horizontaal)",
+    "archerAtk20V": "Boogschutter ATK +20% (verticaal)",
+    "infAtk20V": "Infanterie ATK +20% (verticaal)",
+    "cavAtk20V": "Cavalerie ATK +20% (verticaal)",
+    "troopDef20V": "Troepen DEF +20% (verticaal)",
+    "troopHp20V": "Troepen HP +20% (verticaal)",
+    "archerAtk20H": "Boogschutter ATK +20% (horizontaal)",
+    "infAtk20H": "Infanterie ATK +20% (horizontaal)",
+    "cavAtk20H": "Cavalerie ATK +20% (horizontaal)",
+    "troopDef20H": "Troepen DEF +20% (horizontaal)",
+    "troopHp20H": "Troepen HP +20% (horizontaal)"
+  },
+  "pl": {
+    "subtitle": "Optymalizator kamieni bohatera 7 × 5 do Puzzles & Chaos",
+    "language": "Język",
+    "stones": "Kamienie",
+    "red": "Czerwony",
+    "yellow": "Żółty",
+    "green": "Zielony",
+    "purple": "Fioletowy",
+    "blue": "Niebieski",
+    "mainTroop": "Główny typ wojsk",
+    "cavalry": "Kawaleria",
+    "archers": "Łucznicy",
+    "infantry": "Piechota",
+    "balanced": "Zrównoważone / maksymalna łączna premia",
+    "optimize": "Optymalizuj",
+    "copy": "Kopiuj tekst do Discorda",
+    "bestLayout": "Najlepszy znaleziony układ",
+    "discordOutput": "Wynik do Discorda",
+    "note": "The solver uses stochastic hill climbing with up to 10 random restarts. The search always stops after no more than 500 milliseconds.",
+    "activeBonuses": "Aktywne premie",
+    "activePercent": "Suma aktywnych procentów",
+    "profileScore": "Ocena profilu",
+    "overview": "Przegląd premii",
+    "optimizing": "Optymalizacja…",
+    "copied": "Tekst do Discorda skopiowano do schowka.",
+    "tooMany": "Wprowadzono więcej niż 35 kamieni.",
+    "invalid": "Nieprawidłowa liczba dla",
+    "noLayout": "Nie udało się wygenerować prawidłowego układu.",
+    "finished": "Obliczenia zakończono po {ms} ms, {restarts} restartach i {iterations} sprawdzonych zamianach.",
+    "archerDef10V": "OBR łuczników +10%",
+    "infDef10V": "OBR piechoty +10%",
+    "cavDef10V": "OBR kawalerii +10%",
+    "troopDef5V": "OBR wojsk +5% (pionowo)",
+    "troopHp5V": "PŻ wojsk +5% (pionowo)",
+    "archerHp10H": "PŻ łuczników +10%",
+    "infHp10H": "PŻ piechoty +10%",
+    "cavHp10H": "PŻ kawalerii +10%",
+    "troopDef5H": "OBR wojsk +5% (poziomo)",
+    "troopHp5H": "PŻ wojsk +5% (poziomo)",
+    "archerAtk20V": "ATK łuczników +20% (pionowo)",
+    "infAtk20V": "ATK piechoty +20% (pionowo)",
+    "cavAtk20V": "ATK kawalerii +20% (pionowo)",
+    "troopDef20V": "OBR wojsk +20% (pionowo)",
+    "troopHp20V": "PŻ wojsk +20% (pionowo)",
+    "archerAtk20H": "ATK łuczników +20% (poziomo)",
+    "infAtk20H": "ATK piechoty +20% (poziomo)",
+    "cavAtk20H": "ATK kawalerii +20% (poziomo)",
+    "troopDef20H": "OBR wojsk +20% (poziomo)",
+    "troopHp20H": "PŻ wojsk +20% (poziomo)"
+  },
+  "tr": {
+    "subtitle": "Puzzles & Chaos için 7 × 5 Kahraman Taşı Optimize Edici",
+    "language": "Dil",
+    "stones": "Taşlar",
+    "red": "Kırmızı",
+    "yellow": "Sarı",
+    "green": "Yeşil",
+    "purple": "Mor",
+    "blue": "Mavi",
+    "mainTroop": "Ana birlik türü",
+    "cavalry": "Süvari",
+    "archers": "Okçular",
+    "infantry": "Piyade",
+    "balanced": "Dengeli / maksimum toplam bonus",
+    "optimize": "Optimize et",
+    "copy": "Discord metnini kopyala",
+    "bestLayout": "Bulunan en iyi düzen",
+    "discordOutput": "Discord çıktısı",
+    "note": "The solver uses stochastic hill climbing with up to 10 random restarts. The search always stops after no more than 500 milliseconds.",
+    "activeBonuses": "Aktif bonuslar",
+    "activePercent": "Aktif yüzde toplamı",
+    "profileScore": "Profil puanı",
+    "overview": "Bonus özeti",
+    "optimizing": "Optimize ediliyor…",
+    "copied": "Discord metni panoya kopyalandı.",
+    "tooMany": "35'ten fazla taş girildi.",
+    "invalid": "Geçersiz miktar",
+    "noLayout": "Geçerli bir düzen oluşturulamadı.",
+    "finished": "Hesaplama {ms} ms içinde tamamlandı; {restarts} yeniden başlatma ve {iterations} takas denendi.",
+    "archerDef10V": "Okçu SAV +10%",
+    "infDef10V": "Piyade SAV +10%",
+    "cavDef10V": "Süvari SAV +10%",
+    "troopDef5V": "Birlik SAV +5% (dikey)",
+    "troopHp5V": "Birlik CAN +5% (dikey)",
+    "archerHp10H": "Okçu CAN +10%",
+    "infHp10H": "Piyade CAN +10%",
+    "cavHp10H": "Süvari CAN +10%",
+    "troopDef5H": "Birlik SAV +5% (yatay)",
+    "troopHp5H": "Birlik CAN +5% (yatay)",
+    "archerAtk20V": "Okçu SAL +20% (dikey)",
+    "infAtk20V": "Piyade SAL +20% (dikey)",
+    "cavAtk20V": "Süvari SAL +20% (dikey)",
+    "troopDef20V": "Birlik SAV +20% (dikey)",
+    "troopHp20V": "Birlik CAN +20% (dikey)",
+    "archerAtk20H": "Okçu SAL +20% (yatay)",
+    "infAtk20H": "Piyade SAL +20% (yatay)",
+    "cavAtk20H": "Süvari SAL +20% (yatay)",
+    "troopDef20H": "Birlik SAV +20% (yatay)",
+    "troopHp20H": "Birlik CAN +20% (yatay)"
+  },
+  "sv": {
+    "subtitle": "7 × 5 hjältestensoptimerare för Puzzles & Chaos",
+    "language": "Språk",
+    "stones": "Stenar",
+    "red": "Röd",
+    "yellow": "Gul",
+    "green": "Grön",
+    "purple": "Lila",
+    "blue": "Blå",
+    "mainTroop": "Huvudsaklig trupp",
+    "cavalry": "Kavalleri",
+    "archers": "Bågskyttar",
+    "infantry": "Infanteri",
+    "balanced": "Balanserad / maximal total bonus",
+    "optimize": "Optimera",
+    "copy": "Kopiera Discord-text",
+    "bestLayout": "Bästa hittade layout",
+    "discordOutput": "Discord-utdata",
+    "note": "The solver uses stochastic hill climbing with up to 10 random restarts. The search always stops after no more than 500 milliseconds.",
+    "activeBonuses": "Aktiva bonusar",
+    "activePercent": "Aktiv procentsumma",
+    "profileScore": "Profilpoäng",
+    "overview": "Bonusöversikt",
+    "optimizing": "Optimerar…",
+    "copied": "Discord-texten har kopierats.",
+    "tooMany": "Fler än 35 stenar har angetts.",
+    "invalid": "Ogiltigt antal för",
+    "noLayout": "Ingen giltig layout kunde skapas.",
+    "finished": "Beräkningen slutfördes på {ms} ms med {restarts} omstarter och {iterations} testade byten.",
+    "archerDef10V": "Bågskytt DEF +10%",
+    "infDef10V": "Infanteri DEF +10%",
+    "cavDef10V": "Kavalleri DEF +10%",
+    "troopDef5V": "Trupp DEF +5% (vertikalt)",
+    "troopHp5V": "Trupp HP +5% (vertikalt)",
+    "archerHp10H": "Bågskytt HP +10%",
+    "infHp10H": "Infanteri HP +10%",
+    "cavHp10H": "Kavalleri HP +10%",
+    "troopDef5H": "Trupp DEF +5% (horisontellt)",
+    "troopHp5H": "Trupp HP +5% (horisontellt)",
+    "archerAtk20V": "Bågskytt ATK +20% (vertikalt)",
+    "infAtk20V": "Infanteri ATK +20% (vertikalt)",
+    "cavAtk20V": "Kavalleri ATK +20% (vertikalt)",
+    "troopDef20V": "Trupp DEF +20% (vertikalt)",
+    "troopHp20V": "Trupp HP +20% (vertikalt)",
+    "archerAtk20H": "Bågskytt ATK +20% (horisontellt)",
+    "infAtk20H": "Infanteri ATK +20% (horisontellt)",
+    "cavAtk20H": "Kavalleri ATK +20% (horisontellt)",
+    "troopDef20H": "Trupp DEF +20% (horisontellt)",
+    "troopHp20H": "Trupp HP +20% (horisontellt)"
+  },
+  "ko": {
+    "subtitle": "Puzzles & Chaos 7 × 5 영웅석 최적화 도구",
+    "language": "언어",
+    "stones": "보석",
+    "red": "빨강",
+    "yellow": "노랑",
+    "green": "초록",
+    "purple": "보라",
+    "blue": "파랑",
+    "mainTroop": "주력 병종",
+    "cavalry": "기병",
+    "archers": "궁병",
+    "infantry": "보병",
+    "balanced": "균형 / 총 보너스 최대화",
+    "optimize": "최적화",
+    "copy": "Discord 텍스트 복사",
+    "bestLayout": "최적 배치 결과",
+    "discordOutput": "Discord 출력",
+    "note": "The solver uses stochastic hill climbing with up to 10 random restarts. The search always stops after no more than 500 milliseconds.",
+    "activeBonuses": "활성 보너스",
+    "activePercent": "활성 퍼센트 합계",
+    "profileScore": "프로필 점수",
+    "overview": "보너스 개요",
+    "optimizing": "최적화 중…",
+    "copied": "Discord 텍스트를 클립보드에 복사했습니다.",
+    "tooMany": "보석 수가 35개를 초과했습니다.",
+    "invalid": "잘못된 수량",
+    "noLayout": "유효한 배치를 만들 수 없습니다.",
+    "finished": "{ms}ms, 재시작 {restarts}회, 교환 {iterations}회 검사 후 완료되었습니다.",
+    "archerDef10V": "궁병 방어 +10%",
+    "infDef10V": "보병 방어 +10%",
+    "cavDef10V": "기병 방어 +10%",
+    "troopDef5V": "부대 방어 +5% (세로)",
+    "troopHp5V": "부대 HP +5% (세로)",
+    "archerHp10H": "궁병 HP +10%",
+    "infHp10H": "보병 HP +10%",
+    "cavHp10H": "기병 HP +10%",
+    "troopDef5H": "부대 방어 +5% (가로)",
+    "troopHp5H": "부대 HP +5% (가로)",
+    "archerAtk20V": "궁병 공격 +20% (세로)",
+    "infAtk20V": "보병 공격 +20% (세로)",
+    "cavAtk20V": "기병 공격 +20% (세로)",
+    "troopDef20V": "부대 방어 +20% (세로)",
+    "troopHp20V": "부대 HP +20% (세로)",
+    "archerAtk20H": "궁병 공격 +20% (가로)",
+    "infAtk20H": "보병 공격 +20% (가로)",
+    "cavAtk20H": "기병 공격 +20% (가로)",
+    "troopDef20H": "부대 방어 +20% (가로)",
+    "troopHp20H": "부대 HP +20% (가로)"
+  },
+  "ja": {
+    "subtitle": "Puzzles & Chaos 7 × 5 英雄ストーン最適化ツール",
+    "language": "言語",
+    "stones": "ストーン",
+    "red": "赤",
+    "yellow": "黄",
+    "green": "緑",
+    "purple": "紫",
+    "blue": "青",
+    "mainTroop": "主力兵種",
+    "cavalry": "騎兵",
+    "archers": "弓兵",
+    "infantry": "歩兵",
+    "balanced": "バランス / 合計ボーナス最大",
+    "optimize": "最適化",
+    "copy": "Discord用テキストをコピー",
+    "bestLayout": "最適な配置",
+    "discordOutput": "Discord出力",
+    "note": "The solver uses stochastic hill climbing with up to 10 random restarts. The search always stops after no more than 500 milliseconds.",
+    "activeBonuses": "有効ボーナス",
+    "activePercent": "有効パーセント合計",
+    "profileScore": "プロフィールスコア",
+    "overview": "ボーナス一覧",
+    "optimizing": "最適化中…",
+    "copied": "Discord用テキストをコピーしました。",
+    "tooMany": "ストーンが35個を超えています。",
+    "invalid": "無効な数量",
+    "noLayout": "有効な配置を生成できませんでした。",
+    "finished": "{ms}ms、{restarts}回の再スタート、{iterations}回の交換検証で完了しました。",
+    "archerDef10V": "弓兵防御 +10%",
+    "infDef10V": "歩兵防御 +10%",
+    "cavDef10V": "騎兵防御 +10%",
+    "troopDef5V": "部隊防御 +5%（縦）",
+    "troopHp5V": "部隊HP +5%（縦）",
+    "archerHp10H": "弓兵HP +10%",
+    "infHp10H": "歩兵HP +10%",
+    "cavHp10H": "騎兵HP +10%",
+    "troopDef5H": "部隊防御 +5%（横）",
+    "troopHp5H": "部隊HP +5%（横）",
+    "archerAtk20V": "弓兵攻撃 +20%（縦）",
+    "infAtk20V": "歩兵攻撃 +20%（縦）",
+    "cavAtk20V": "騎兵攻撃 +20%（縦）",
+    "troopDef20V": "部隊防御 +20%（縦）",
+    "troopHp20V": "部隊HP +20%（縦）",
+    "archerAtk20H": "弓兵攻撃 +20%（横）",
+    "infAtk20H": "歩兵攻撃 +20%（横）",
+    "cavAtk20H": "騎兵攻撃 +20%（横）",
+    "troopDef20H": "部隊防御 +20%（横）",
+    "troopHp20H": "部隊HP +20%（横）"
+  },
+  "zh": {
+    "subtitle": "Puzzles & Chaos 7 × 5 英雄宝石优化器",
+    "language": "语言",
+    "stones": "宝石",
+    "red": "红色",
+    "yellow": "黄色",
+    "green": "绿色",
+    "purple": "紫色",
+    "blue": "蓝色",
+    "mainTroop": "主力兵种",
+    "cavalry": "骑兵",
+    "archers": "弓兵",
+    "infantry": "步兵",
+    "balanced": "均衡 / 最大总加成",
+    "optimize": "优化",
+    "copy": "复制 Discord 文本",
+    "bestLayout": "最佳布局",
+    "discordOutput": "Discord 输出",
+    "note": "The solver uses stochastic hill climbing with up to 10 random restarts. The search always stops after no more than 500 milliseconds.",
+    "activeBonuses": "已激活加成",
+    "activePercent": "激活百分比总和",
+    "profileScore": "配置评分",
+    "overview": "加成概览",
+    "optimizing": "正在优化…",
+    "copied": "Discord 文本已复制到剪贴板。",
+    "tooMany": "输入的宝石超过35个。",
+    "invalid": "数量无效",
+    "noLayout": "无法生成有效布局。",
+    "finished": "计算完成：{ms}毫秒，{restarts}次重启，测试{iterations}次交换。",
+    "archerDef10V": "弓兵防御 +10%",
+    "infDef10V": "步兵防御 +10%",
+    "cavDef10V": "骑兵防御 +10%",
+    "troopDef5V": "部队防御 +5%（纵向）",
+    "troopHp5V": "部队生命 +5%（纵向）",
+    "archerHp10H": "弓兵生命 +10%",
+    "infHp10H": "步兵生命 +10%",
+    "cavHp10H": "骑兵生命 +10%",
+    "troopDef5H": "部队防御 +5%（横向）",
+    "troopHp5H": "部队生命 +5%（横向）",
+    "archerAtk20V": "弓兵攻击 +20%（纵向）",
+    "infAtk20V": "步兵攻击 +20%（纵向）",
+    "cavAtk20V": "骑兵攻击 +20%（纵向）",
+    "troopDef20V": "部队防御 +20%（纵向）",
+    "troopHp20V": "部队生命 +20%（纵向）",
+    "archerAtk20H": "弓兵攻击 +20%（横向）",
+    "infAtk20H": "步兵攻击 +20%（横向）",
+    "cavAtk20H": "骑兵攻击 +20%（横向）",
+    "troopDef20H": "部队防御 +20%（横向）",
+    "troopHp20H": "部队生命 +20%（横向）"
+  }
+};
+
+let currentLanguage = localStorage.getItem("bkryLanguage") ||
+  ((navigator.language || "de").slice(0,2).toLowerCase());
+if (!translations[currentLanguage]) currentLanguage = "en";
+
+function tr(key) {
+  return translations[currentLanguage][key] || translations.de[key] || key;
+}
+function fmt(template, values) {
+  return template.replace(/\{(\w+)\}/g, (_, key) => values[key] ?? `{${key}}`);
+}
+function profileName(profile) {
+  return {cav:tr("cavalry"),arch:tr("archers"),inf:tr("infantry"),all:tr("balanced")}[profile];
+}
+function applyLanguage(lang) {
+  currentLanguage = translations[lang] ? lang : "en";
+  localStorage.setItem("bkryLanguage", currentLanguage);
+  document.documentElement.lang = currentLanguage;
+  document.getElementById("languageSelect").value = currentLanguage;
+  document.getElementById("subtitle").textContent = tr("subtitle");
+  document.getElementById("languageLabel").textContent = tr("language");
+  document.getElementById("stonesTitle").textContent = tr("stones");
+  document.getElementById("redLabel").textContent = tr("red");
+  document.getElementById("yellowLabel").textContent = tr("yellow");
+  document.getElementById("greenLabel").textContent = tr("green");
+  document.getElementById("purpleLabel").textContent = tr("purple");
+  document.getElementById("blueLabel").textContent = tr("blue");
+  document.getElementById("mainTroopLabel").textContent = tr("mainTroop");
+  document.getElementById("profileCav").textContent = tr("cavalry");
+  document.getElementById("profileArch").textContent = tr("archers");
+  document.getElementById("profileInf").textContent = tr("infantry");
+  document.getElementById("profileAll").textContent = tr("balanced");
+  document.getElementById("solveButton").textContent = tr("optimize");
+  document.getElementById("copyButton").textContent = tr("copy");
+  document.getElementById("bestLayoutTitle").textContent = tr("bestLayout");
+  document.getElementById("discordOutputTitle").textContent = tr("discordOutput");
+  document.getElementById("solverNote").textContent = tr("note");
+  if (window.lastResult) renderResult(window.lastResult.result, window.lastResult.profile);
+}
+
+const ROWS = 5;
+const COLS = 7;
+const CELLS = ROWS * COLS;
+
+const MAX_RESTARTS = 10;
+const MAX_ITERATIONS = 5000;
+const MAX_RUNTIME_MS = 500;
+
+const emoji = {
+  R: "🟥",
+  Y: "🟨",
+  G: "🟩",
+  P: "🟪",
+  B: "🟦",
+  E: "⬛"
+};
+
+/*
+  Jede Kombination kann horizontal oder vertikal genau einmal aktiviert werden.
+  Die Bonusgruppen werden über das gewählte Haupttruppen-Profil unterschiedlich gewichtet.
+*/
+const bonuses = [
+  { key:"archerDef10V", orientation:"V", sequence:"RYP", value:10, group:"arch" },
+  { key:"infDef10V", orientation:"V", sequence:"GYP", value:10, group:"inf" },
+  { key:"cavDef10V", orientation:"V", sequence:"BYP", value:10, group:"cav" },
+  { key:"troopDef5V", orientation:"V", sequence:"RGB", value:5, group:"troop" },
+  { key:"troopHp5V", orientation:"V", sequence:"BGR", value:5, group:"troop" },
+
+  { key:"archerHp10H", orientation:"H", sequence:"RYP", value:10, group:"arch" },
+  { key:"infHp10H", orientation:"H", sequence:"GYP", value:10, group:"inf" },
+  { key:"cavHp10H", orientation:"H", sequence:"BYP", value:10, group:"cav" },
+  { key:"troopDef5H", orientation:"H", sequence:"RGB", value:5, group:"troop" },
+  { key:"troopHp5H", orientation:"H", sequence:"BGR", value:5, group:"troop" },
+
+  { key:"archerAtk20V", orientation:"V", sequence:"RRRR", value:20, group:"arch" },
+  { key:"infAtk20V", orientation:"V", sequence:"GGGG", value:20, group:"inf" },
+  { key:"cavAtk20V", orientation:"V", sequence:"BBBB", value:20, group:"cav" },
+  { key:"troopDef20V", orientation:"V", sequence:"PPPP", value:20, group:"troop" },
+  { key:"troopHp20V", orientation:"V", sequence:"YYYY", value:20, group:"troop" },
+
+  { key:"archerAtk20H", orientation:"H", sequence:"RRRR", value:20, group:"arch" },
+  { key:"infAtk20H", orientation:"H", sequence:"GGGG", value:20, group:"inf" },
+  { key:"cavAtk20H", orientation:"H", sequence:"BBBB", value:20, group:"cav" },
+  { key:"troopDef20H", orientation:"H", sequence:"PPPP", value:20, group:"troop" },
+  { key:"troopHp20H", orientation:"H", sequence:"YYYY", value:20, group:"troop" }
+];
+
+function getWeights(profile) {
+  /*
+    Allgemeine Truppenboni sind für jede Haupttruppe sehr wertvoll.
+    Boni der gewählten Haupttruppe werden klar bevorzugt.
+    Fremde Truppengattungen zählen nur als nützlicher Beifang.
+  */
+  switch (profile) {
+    case "cav":
+      return { troop: 120, cav: 100, arch: 8, inf: 8 };
+    case "arch":
+      return { troop: 120, arch: 100, cav: 8, inf: 8 };
+    case "inf":
+      return { troop: 120, inf: 100, cav: 8, arch: 8 };
+    default:
+      return { troop: 20, cav: 20, arch: 20, inf: 20 };
+  }
+}
+
+function isBonusActive(grid, bonus) {
+  const length = bonus.sequence.length;
+
+  if (bonus.orientation === "H") {
+    for (let row = 0; row < ROWS; row++) {
+      for (let col = 0; col <= COLS - length; col++) {
+        let matches = true;
+
+        for (let offset = 0; offset < length; offset++) {
+          if (grid[row * COLS + col + offset] !== bonus.sequence[offset]) {
+            matches = false;
+            break;
+          }
+        }
+
+        if (matches) return true;
+      }
+    }
+  } else {
+    for (let row = 0; row <= ROWS - length; row++) {
+      for (let col = 0; col < COLS; col++) {
+        let matches = true;
+
+        for (let offset = 0; offset < length; offset++) {
+          if (grid[(row + offset) * COLS + col] !== bonus.sequence[offset]) {
+            matches = false;
+            break;
+          }
+        }
+
+        if (matches) return true;
+      }
+    }
+  }
+
+  return false;
+}
+
+function evaluateLayout(grid, profile) {
+  const weights = getWeights(profile);
+  const active = [];
+  let weightedScore = 0;
+  let rawBonusTotal = 0;
+  let activeCount = 0;
+
+  for (const bonus of bonuses) {
+    const enabled = isBonusActive(grid, bonus);
+    active.push(enabled);
+
+    if (enabled) {
+      activeCount++;
+      rawBonusTotal += bonus.value;
+      weightedScore += bonus.value * weights[bonus.group];
+    }
+  }
+
+  return {
+    weightedScore,
+    rawBonusTotal,
+    activeCount,
+    active
+  };
+}
+
+function isBetter(candidate, currentBest) {
+  if (!currentBest) return true;
+
+  if (candidate.weightedScore !== currentBest.weightedScore) {
+    return candidate.weightedScore > currentBest.weightedScore;
+  }
+
+  if (candidate.rawBonusTotal !== currentBest.rawBonusTotal) {
+    return candidate.rawBonusTotal > currentBest.rawBonusTotal;
+  }
+
+  return candidate.activeCount > currentBest.activeCount;
+}
+
+function shuffle(array) {
+  for (let i = array.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [array[i], array[j]] = [array[j], array[i]];
+  }
+  return array;
+}
+
+function createRandomLayout(stoneBag) {
+  return shuffle([...stoneBag]);
+}
+
+function buildStoneBag(counts) {
+  const bag = [];
+
+  for (const color of ["R", "Y", "G", "P", "B"]) {
+    for (let i = 0; i < counts[color]; i++) {
+      bag.push(color);
+    }
+  }
+
+  while (bag.length < CELLS) {
+    bag.push("E");
+  }
+
+  return bag;
+}
+
+function optimizeLayout(stoneBag, profile) {
+  const startTime = performance.now();
+
+  let globalBestGrid = null;
+  let globalBestEvaluation = null;
+  let completedRestarts = 0;
+  let completedIterations = 0;
+
+  for (let restart = 0; restart < MAX_RESTARTS; restart++) {
+    if (performance.now() - startTime >= MAX_RUNTIME_MS) break;
+
+    let currentGrid = createRandomLayout(stoneBag);
+    let currentEvaluation = evaluateLayout(currentGrid, profile);
+
+    if (isBetter(currentEvaluation, globalBestEvaluation)) {
+      globalBestGrid = [...currentGrid];
+      globalBestEvaluation = currentEvaluation;
+    }
+
+    for (let iteration = 0; iteration < MAX_ITERATIONS; iteration++) {
+      if (performance.now() - startTime >= MAX_RUNTIME_MS) break;
+
+      completedIterations++;
+
+      const first = Math.floor(Math.random() * CELLS);
+      let second = Math.floor(Math.random() * CELLS);
+
+      if (first === second || currentGrid[first] === currentGrid[second]) {
+        continue;
+      }
+
+      [currentGrid[first], currentGrid[second]] =
+        [currentGrid[second], currentGrid[first]];
+
+      const candidateEvaluation = evaluateLayout(currentGrid, profile);
+
+      /*
+        Reines Hill-Climbing:
+        Nur gleich gute oder bessere Zustände bleiben bestehen.
+        Gleich gute Zustände dürfen bleiben, damit das Verfahren Plateaus durchqueren kann.
+      */
+      const keepCandidate =
+        candidateEvaluation.weightedScore > currentEvaluation.weightedScore ||
+        (
+          candidateEvaluation.weightedScore === currentEvaluation.weightedScore &&
+          candidateEvaluation.rawBonusTotal >= currentEvaluation.rawBonusTotal
+        );
+
+      if (keepCandidate) {
+        currentEvaluation = candidateEvaluation;
+
+        if (isBetter(currentEvaluation, globalBestEvaluation)) {
+          globalBestGrid = [...currentGrid];
+          globalBestEvaluation = currentEvaluation;
+        }
+      } else {
+        [currentGrid[first], currentGrid[second]] =
+          [currentGrid[second], currentGrid[first]];
+      }
+    }
+
+    completedRestarts++;
+  }
+
+  return {
+    grid: globalBestGrid,
+    evaluation: globalBestEvaluation,
+    elapsedMs: performance.now() - startTime,
+    completedRestarts,
+    completedIterations
+  };
+}
+
+function readCounts() {
+  return {
+    R: Number(document.getElementById("R").value),
+    Y: Number(document.getElementById("Y").value),
+    G: Number(document.getElementById("G").value),
+    P: Number(document.getElementById("P").value),
+    B: Number(document.getElementById("B").value)
+  };
+}
+
+function validateCounts(counts) {
+  for (const [color, amount] of Object.entries(counts)) {
+    if (!Number.isInteger(amount) || amount < 0 || amount > CELLS) {
+      throw new Error(`${tr("invalid")} ${color}.`);
+    }
+  }
+
+  const total = Object.values(counts).reduce((sum, amount) => sum + amount, 0);
+
+  if (total > CELLS) {
+    throw new Error(tr("tooMany"));
+  }
+
+  return total;
+}
+
+window.lastResult = null;
+
+function renderResult(result, profile) {
+  window.lastResult = { result, profile };
+  const gridElement = document.getElementById("grid");
+  const bonusElement = document.getElementById("bonuses");
+  const scoreElement = document.getElementById("score");
+  const shareElement = document.getElementById("share");
+  const statusElement = document.getElementById("status");
+
+  gridElement.innerHTML = "";
+  bonusElement.innerHTML = "";
+
+  for (const stone of result.grid) {
+    const cell = document.createElement("div");
+    cell.className = `cell ${stone}`;
+    cell.textContent = emoji[stone];
+    gridElement.appendChild(cell);
+  }
+
+  scoreElement.innerHTML =
+    `<b>${tr("activeBonuses")}:</b> ${result.evaluation.activeCount}` +
+    ` &nbsp; | &nbsp; <b>${tr("activePercent")}:</b> ${result.evaluation.rawBonusTotal}` +
+    ` &nbsp; | &nbsp; <b>${tr("profileScore")}:</b> ${result.evaluation.weightedScore}`;
+
+  let bonusHtml = `<h3>${tr("overview")}</h3>`;
+
+  bonuses.forEach((bonus, index) => {
+    const enabled = result.evaluation.active[index];
+
+    bonusHtml +=
+      `<div class="bonus ${enabled ? "on" : "off"}">` +
+      `${enabled ? "✅" : "—"} ${tr(bonus.key)}` +
+      `</div>`;
+  });
+
+  bonusElement.innerHTML = bonusHtml;
+
+  const shareLines = [
+    "**BKRY Solver v1.3 Global Edition**",
+    `**${tr("mainTroop")}:** ${profileName(profile)}`,
+    ""
+  ];
+
+  for (let row = 0; row < ROWS; row++) {
+    const rowSymbols = result.grid
+      .slice(row * COLS, (row + 1) * COLS)
+      .map(stone => emoji[stone])
+      .join("");
+
+    shareLines.push(rowSymbols);
+  }
+
+  shareLines.push("", `**${tr("activeBonuses")}:**`);
+
+  bonuses.forEach((bonus, index) => {
+    if (result.evaluation.active[index]) {
+      shareLines.push(`✅ ${tr(bonus.key)}`);
+    }
+  });
+
+  shareElement.value = shareLines.join("\n");
+
+  statusElement.textContent = fmt(tr("finished"), {
+    ms: result.elapsedMs.toFixed(1),
+    restarts: result.completedRestarts,
+    iterations: result.completedIterations.toLocaleString(currentLanguage)
+  });
+}
+
+function solve() {
+  const statusElement = document.getElementById("status");
+
+  try {
+    statusElement.textContent = tr("optimizing");
+
+    /*
+      requestAnimationFrame lässt den Browser zunächst die Statusanzeige zeichnen.
+      Die eigentliche Suche bleibt durch das 500-ms-Zeitlimit kurz.
+    */
+    requestAnimationFrame(() => {
+      try {
+        const counts = readCounts();
+        validateCounts(counts);
+
+        const profile = document.getElementById("profile").value;
+        const stoneBag = buildStoneBag(counts);
+        const result = optimizeLayout(stoneBag, profile);
+
+        if (!result.grid || !result.evaluation) {
+          throw new Error(tr("noLayout"));
+        }
+
+        renderResult(result, profile);
+      } catch (error) {
+        statusElement.textContent = "";
+        alert(error.message);
+      }
+    });
+  } catch (error) {
+    statusElement.textContent = "";
+    alert(error.message);
+  }
+}
+
+async function copyShareText() {
+  const text = document.getElementById("share").value;
+
+  if (!text) return;
+
+  try {
+    await navigator.clipboard.writeText(text);
+    document.getElementById("status").textContent =
+      tr("copied");
+  } catch {
+    const textArea = document.getElementById("share");
+    textArea.focus();
+    textArea.select();
+    document.execCommand("copy");
+  }
+}
+
+document.getElementById("solveButton").addEventListener("click", solve);
+document.getElementById("copyButton").addEventListener("click", copyShareText);
+document.getElementById("languageSelect").addEventListener("change", event => {
+  applyLanguage(event.target.value);
+});
+
+applyLanguage(currentLanguage);
+solve();
+</script>
+</body>
+</html>
