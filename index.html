@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>BKRY Solver v1.3 Global Edition</title>
+<title>BKRY Solver v1.4 Beta</title>
 <style>
   :root { color-scheme: dark; }
   body{
@@ -97,7 +97,7 @@
 <body>
 <div class="topbar">
   <div>
-    <h1>BKRY Solver v1.3 Global Edition</h1>
+    <h1>BKRY Solver v1.4 Beta</h1>
     <p class="sub" id="subtitle">7 × 5 Heldenstein-Optimierer für Puzzles & Chaos</p>
   </div>
   <div class="langbox">
@@ -126,19 +126,19 @@
 
   <div class="counts">
     <label>🟥 <span id="redLabel">Rot</span>
-      <input id="R" type="number" min="0" max="35" value="5">
+      <input id="R" type="number" min="0" max="999" value="5">
     </label>
     <label>🟨 <span id="yellowLabel">Gelb</span>
-      <input id="Y" type="number" min="0" max="35" value="7">
+      <input id="Y" type="number" min="0" max="999" value="7">
     </label>
     <label>🟩 <span id="greenLabel">Grün</span>
-      <input id="G" type="number" min="0" max="35" value="6">
+      <input id="G" type="number" min="0" max="999" value="6">
     </label>
     <label>🟪 <span id="purpleLabel">Lila</span>
-      <input id="P" type="number" min="0" max="35" value="4">
+      <input id="P" type="number" min="0" max="999" value="4">
     </label>
     <label>🟦 <span id="blueLabel">Blau</span>
-      <input id="B" type="number" min="0" max="35" value="3">
+      <input id="B" type="number" min="0" max="999" value="3">
     </label>
   </div>
 
@@ -153,6 +153,18 @@
     </label>
   </p>
 
+  <p>
+    <label><span id="goalLabel">Optimierungsziel</span>
+      <select id="goal">
+        <option value="count" id="goalCount">Maximale Anzahl aktiver Boni</option>
+        <option value="focus" id="goalFocus">Haupttruppe und Truppenboni priorisieren</option>
+        <option value="percent" id="goalPercent">Maximale Prozent-Summe</option>
+      </select>
+    </label>
+  </p>
+
+  <p class="note" id="inventoryHint">Gib deinen gesamten Steinbestand ein. Der Solver wählt automatisch höchstens 35 Steine für das Feld aus.</p>
+
   <button class="primary" id="solveButton">Optimieren</button>
   <button id="copyButton">Discord-Text kopieren</button>
   <div id="status" class="status"></div>
@@ -161,6 +173,7 @@
 <div class="panel">
   <h2 id="bestLayoutTitle">Beste gefundene Anordnung</h2>
   <div id="score"></div>
+  <div id="inventorySummary" class="note"></div>
   <div id="grid" class="grid"></div>
   <div id="bonuses"></div>
 </div>
@@ -169,8 +182,7 @@
   <h2 id="discordOutputTitle">Discord-Ausgabe</h2>
   <textarea id="share" readonly></textarea>
   <p class="note" id="solverNote">
-    Der Solver verwendet stochastisches Hill-Climbing mit bis zu 10 zufälligen Neustarts.
-    Die Suche wird spätestens nach 500 Millisekunden beendet.
+    Das Ergebnis ist die beste innerhalb der kurzen Suchzeit gefundene Lösung, keine mathematische Garantie. Ein weiterer Klick kann das Ergebnis noch verbessern.
   </p>
 </div>
 
@@ -227,7 +239,15 @@ const translations = {
     "infAtk20H": "Infanterie-ANG +20% (horizontal)",
     "cavAtk20H": "Kavallerie-ANG +20% (horizontal)",
     "troopDef20H": "Truppen-VER +20% (horizontal)",
-    "troopHp20H": "Truppen-LP +20% (horizontal)"
+    "troopHp20H": "Truppen-LP +20% (horizontal)",
+    "goalLabel": "Optimierungsziel",
+    "goalCount": "Maximale Anzahl aktiver Boni",
+    "goalFocus": "Haupttruppe und Truppenboni priorisieren",
+    "goalPercent": "Maximale Prozent-Summe",
+    "inventoryHint": "Gib deinen gesamten Steinbestand ein. Der Solver wählt automatisch höchstens 35 Steine für das Feld aus.",
+    "usedStones": "Verwendete Steine",
+    "reserveStones": "Reserve",
+    "heuristicWarning": "Das Ergebnis ist die beste innerhalb der kurzen Suchzeit gefundene Lösung, keine mathematische Garantie. Ein weiterer Klick kann das Ergebnis noch verbessern."
   },
   "en": {
     "subtitle": "7 × 5 Hero Stone Optimizer for Puzzles & Chaos",
@@ -277,7 +297,15 @@ const translations = {
     "infAtk20H": "Infantry ATK +20% (horizontal)",
     "cavAtk20H": "Cavalry ATK +20% (horizontal)",
     "troopDef20H": "Troop DEF +20% (horizontal)",
-    "troopHp20H": "Troop HP +20% (horizontal)"
+    "troopHp20H": "Troop HP +20% (horizontal)",
+    "goalLabel": "Optimization goal",
+    "goalCount": "Maximum number of active bonuses",
+    "goalFocus": "Prioritize main troop and troop bonuses",
+    "goalPercent": "Maximum percentage total",
+    "inventoryHint": "Enter your entire stone inventory. The solver automatically selects no more than 35 stones for the board.",
+    "usedStones": "Stones used",
+    "reserveStones": "Reserve",
+    "heuristicWarning": "This is the best solution found within the short search time, not a mathematical guarantee. Running the solver again may improve it."
   },
   "ru": {
     "subtitle": "Оптимизатор камней героя 7 × 5 для Puzzles & Chaos",
@@ -327,7 +355,15 @@ const translations = {
     "infAtk20H": "Атака пехоты +20% (горизонтально)",
     "cavAtk20H": "Атака кавалерии +20% (горизонтально)",
     "troopDef20H": "Защита войск +20% (горизонтально)",
-    "troopHp20H": "ОЗ войск +20% (горизонтально)"
+    "troopHp20H": "ОЗ войск +20% (горизонтально)",
+    "goalLabel": "Цель оптимизации",
+    "goalCount": "Максимальное количество активных бонусов",
+    "goalFocus": "Приоритет основного типа войск и общих бонусов",
+    "goalPercent": "Максимальная сумма процентов",
+    "inventoryHint": "Введите весь запас камней. Оптимизатор сам выберет не более 35 камней для поля.",
+    "usedStones": "Использовано камней",
+    "reserveStones": "Резерв",
+    "heuristicWarning": "Это лучшее решение, найденное за короткое время поиска, а не математическая гарантия. Повторный запуск может улучшить результат."
   },
   "es": {
     "subtitle": "Optimizador de piedras de héroe 7 × 5 para Puzzles & Chaos",
@@ -377,7 +413,15 @@ const translations = {
     "infAtk20H": "ATQ de infantería +20% (horizontal)",
     "cavAtk20H": "ATQ de caballería +20% (horizontal)",
     "troopDef20H": "DEF de tropas +20% (horizontal)",
-    "troopHp20H": "PV de tropas +20% (horizontal)"
+    "troopHp20H": "PV de tropas +20% (horizontal)",
+    "goalLabel": "Objetivo de optimización",
+    "goalCount": "Máximo número de bonificaciones activas",
+    "goalFocus": "Priorizar la tropa principal y los bonus de tropas",
+    "goalPercent": "Máxima suma porcentual",
+    "inventoryHint": "Introduce todo tu inventario de piedras. El optimizador elegirá automáticamente un máximo de 35 para el tablero.",
+    "usedStones": "Piedras utilizadas",
+    "reserveStones": "Reserva",
+    "heuristicWarning": "Es la mejor solución encontrada en el breve tiempo de búsqueda, no una garantía matemática. Otro intento puede mejorarla."
   },
   "pt": {
     "subtitle": "Otimizador de pedras de herói 7 × 5 para Puzzles & Chaos",
@@ -427,7 +471,15 @@ const translations = {
     "infAtk20H": "ATQ da infantaria +20% (horizontal)",
     "cavAtk20H": "ATQ da cavalaria +20% (horizontal)",
     "troopDef20H": "DEF das tropas +20% (horizontal)",
-    "troopHp20H": "PV das tropas +20% (horizontal)"
+    "troopHp20H": "PV das tropas +20% (horizontal)",
+    "goalLabel": "Objetivo da otimização",
+    "goalCount": "Número máximo de bônus ativos",
+    "goalFocus": "Priorizar a tropa principal e os bônus de tropas",
+    "goalPercent": "Soma percentual máxima",
+    "inventoryHint": "Insira todo o seu estoque de pedras. O otimizador seleciona automaticamente no máximo 35 para o tabuleiro.",
+    "usedStones": "Pedras usadas",
+    "reserveStones": "Reserva",
+    "heuristicWarning": "Este é o melhor resultado encontrado no curto tempo de busca, não uma garantia matemática. Uma nova tentativa pode melhorar o resultado."
   },
   "fr": {
     "subtitle": "Optimiseur de pierres de héros 7 × 5 pour Puzzles & Chaos",
@@ -477,7 +529,15 @@ const translations = {
     "infAtk20H": "ATQ de l’infanterie +20% (horizontal)",
     "cavAtk20H": "ATQ de la cavalerie +20% (horizontal)",
     "troopDef20H": "DÉF des troupes +20% (horizontal)",
-    "troopHp20H": "PV des troupes +20% (horizontal)"
+    "troopHp20H": "PV des troupes +20% (horizontal)",
+    "goalLabel": "Objectif d’optimisation",
+    "goalCount": "Nombre maximal de bonus actifs",
+    "goalFocus": "Prioriser la troupe principale et les bonus de troupes",
+    "goalPercent": "Somme maximale des pourcentages",
+    "inventoryHint": "Saisissez tout votre stock de pierres. L’optimiseur sélectionne automatiquement au maximum 35 pierres pour la grille.",
+    "usedStones": "Pierres utilisées",
+    "reserveStones": "Réserve",
+    "heuristicWarning": "Il s’agit de la meilleure solution trouvée pendant le court temps de recherche, pas d’une garantie mathématique. Un nouvel essai peut l’améliorer."
   },
   "it": {
     "subtitle": "Ottimizzatore di pietre eroe 7 × 5 per Puzzles & Chaos",
@@ -527,7 +587,15 @@ const translations = {
     "infAtk20H": "ATT fanteria +20% (orizzontale)",
     "cavAtk20H": "ATT cavalleria +20% (orizzontale)",
     "troopDef20H": "DIF truppe +20% (orizzontale)",
-    "troopHp20H": "PS truppe +20% (orizzontale)"
+    "troopHp20H": "PS truppe +20% (orizzontale)",
+    "goalLabel": "Obiettivo di ottimizzazione",
+    "goalCount": "Numero massimo di bonus attivi",
+    "goalFocus": "Dare priorità alla truppa principale e ai bonus truppe",
+    "goalPercent": "Somma percentuale massima",
+    "inventoryHint": "Inserisci tutto il tuo inventario di pietre. Il solver selezionerà automaticamente al massimo 35 pietre per la griglia.",
+    "usedStones": "Pietre utilizzate",
+    "reserveStones": "Riserva",
+    "heuristicWarning": "È la migliore soluzione trovata nel breve tempo di ricerca, non una garanzia matematica. Un altro tentativo può migliorarla."
   },
   "nl": {
     "subtitle": "7 × 5 heldensteen-optimalisator voor Puzzles & Chaos",
@@ -577,7 +645,15 @@ const translations = {
     "infAtk20H": "Infanterie ATK +20% (horizontaal)",
     "cavAtk20H": "Cavalerie ATK +20% (horizontaal)",
     "troopDef20H": "Troepen DEF +20% (horizontaal)",
-    "troopHp20H": "Troepen HP +20% (horizontaal)"
+    "troopHp20H": "Troepen HP +20% (horizontaal)",
+    "goalLabel": "Optimalisatiedoel",
+    "goalCount": "Maximaal aantal actieve bonussen",
+    "goalFocus": "Hoofdtroep en troepenbonussen prioriteren",
+    "goalPercent": "Maximale procentuele som",
+    "inventoryHint": "Voer je volledige stenenvoorraad in. De solver kiest automatisch maximaal 35 stenen voor het bord.",
+    "usedStones": "Gebruikte stenen",
+    "reserveStones": "Reserve",
+    "heuristicWarning": "Dit is de beste oplossing die binnen de korte zoektijd is gevonden, geen wiskundige garantie. Nogmaals uitvoeren kan het resultaat verbeteren."
   },
   "pl": {
     "subtitle": "Optymalizator kamieni bohatera 7 × 5 do Puzzles & Chaos",
@@ -627,7 +703,15 @@ const translations = {
     "infAtk20H": "ATK piechoty +20% (poziomo)",
     "cavAtk20H": "ATK kawalerii +20% (poziomo)",
     "troopDef20H": "OBR wojsk +20% (poziomo)",
-    "troopHp20H": "PŻ wojsk +20% (poziomo)"
+    "troopHp20H": "PŻ wojsk +20% (poziomo)",
+    "goalLabel": "Cel optymalizacji",
+    "goalCount": "Maksymalna liczba aktywnych premii",
+    "goalFocus": "Priorytet dla głównego typu wojsk i premii wojsk",
+    "goalPercent": "Maksymalna suma procentowa",
+    "inventoryHint": "Wprowadź cały zapas kamieni. Optymalizator automatycznie wybierze maksymalnie 35 kamieni na planszę.",
+    "usedStones": "Użyte kamienie",
+    "reserveStones": "Rezerwa",
+    "heuristicWarning": "To najlepsze rozwiązanie znalezione w krótkim czasie wyszukiwania, a nie gwarancja matematyczna. Ponowne uruchomienie może poprawić wynik."
   },
   "tr": {
     "subtitle": "Puzzles & Chaos için 7 × 5 Kahraman Taşı Optimize Edici",
@@ -677,7 +761,15 @@ const translations = {
     "infAtk20H": "Piyade SAL +20% (yatay)",
     "cavAtk20H": "Süvari SAL +20% (yatay)",
     "troopDef20H": "Birlik SAV +20% (yatay)",
-    "troopHp20H": "Birlik CAN +20% (yatay)"
+    "troopHp20H": "Birlik CAN +20% (yatay)",
+    "goalLabel": "Optimizasyon hedefi",
+    "goalCount": "Maksimum aktif bonus sayısı",
+    "goalFocus": "Ana birlik ve birlik bonuslarına öncelik ver",
+    "goalPercent": "Maksimum yüzde toplamı",
+    "inventoryHint": "Tüm taş envanterinizi girin. Çözücü tahta için otomatik olarak en fazla 35 taş seçer.",
+    "usedStones": "Kullanılan taşlar",
+    "reserveStones": "Yedek",
+    "heuristicWarning": "Bu, kısa arama süresinde bulunan en iyi çözümdür; matematiksel garanti değildir. Tekrar çalıştırmak sonucu iyileştirebilir."
   },
   "sv": {
     "subtitle": "7 × 5 hjältestensoptimerare för Puzzles & Chaos",
@@ -727,7 +819,15 @@ const translations = {
     "infAtk20H": "Infanteri ATK +20% (horisontellt)",
     "cavAtk20H": "Kavalleri ATK +20% (horisontellt)",
     "troopDef20H": "Trupp DEF +20% (horisontellt)",
-    "troopHp20H": "Trupp HP +20% (horisontellt)"
+    "troopHp20H": "Trupp HP +20% (horisontellt)",
+    "goalLabel": "Optimeringsmål",
+    "goalCount": "Maximalt antal aktiva bonusar",
+    "goalFocus": "Prioritera huvudtrupp och truppbonusar",
+    "goalPercent": "Maximal procentsumma",
+    "inventoryHint": "Ange hela ditt stenlager. Lösaren väljer automatiskt högst 35 stenar till brädet.",
+    "usedStones": "Använda stenar",
+    "reserveStones": "Reserv",
+    "heuristicWarning": "Detta är den bästa lösningen som hittades under den korta söktiden, inte en matematisk garanti. En ny körning kan förbättra resultatet."
   },
   "ko": {
     "subtitle": "Puzzles & Chaos 7 × 5 영웅석 최적화 도구",
@@ -777,7 +877,15 @@ const translations = {
     "infAtk20H": "보병 공격 +20% (가로)",
     "cavAtk20H": "기병 공격 +20% (가로)",
     "troopDef20H": "부대 방어 +20% (가로)",
-    "troopHp20H": "부대 HP +20% (가로)"
+    "troopHp20H": "부대 HP +20% (가로)",
+    "goalLabel": "최적화 목표",
+    "goalCount": "활성 보너스 수 최대화",
+    "goalFocus": "주력 병종과 부대 보너스 우선",
+    "goalPercent": "퍼센트 합계 최대화",
+    "inventoryHint": "보유한 모든 보석 수를 입력하세요. 최적화 도구가 보드에 사용할 최대 35개를 자동으로 선택합니다.",
+    "usedStones": "사용한 보석",
+    "reserveStones": "보유 잔여",
+    "heuristicWarning": "짧은 탐색 시간 안에 찾은 최선의 결과이며 수학적으로 최적임을 보장하지 않습니다. 다시 실행하면 더 나은 결과를 찾을 수 있습니다."
   },
   "ja": {
     "subtitle": "Puzzles & Chaos 7 × 5 英雄ストーン最適化ツール",
@@ -827,7 +935,15 @@ const translations = {
     "infAtk20H": "歩兵攻撃 +20%（横）",
     "cavAtk20H": "騎兵攻撃 +20%（横）",
     "troopDef20H": "部隊防御 +20%（横）",
-    "troopHp20H": "部隊HP +20%（横）"
+    "troopHp20H": "部隊HP +20%（横）",
+    "goalLabel": "最適化の目標",
+    "goalCount": "有効ボーナス数を最大化",
+    "goalFocus": "主力兵種と部隊ボーナスを優先",
+    "goalPercent": "合計パーセントを最大化",
+    "inventoryHint": "所持しているストーンをすべて入力してください。盤面には最大35個が自動で選ばれます。",
+    "usedStones": "使用ストーン",
+    "reserveStones": "予備",
+    "heuristicWarning": "短い探索時間で見つかった最良解であり、数学的な最適解の保証ではありません。再実行で改善する場合があります。"
   },
   "zh": {
     "subtitle": "Puzzles & Chaos 7 × 5 英雄宝石优化器",
@@ -877,11 +993,35 @@ const translations = {
     "infAtk20H": "步兵攻击 +20%（横向）",
     "cavAtk20H": "骑兵攻击 +20%（横向）",
     "troopDef20H": "部队防御 +20%（横向）",
-    "troopHp20H": "部队生命 +20%（横向）"
+    "troopHp20H": "部队生命 +20%（横向）",
+    "goalLabel": "优化目标",
+    "goalCount": "最大化已激活加成数量",
+    "goalFocus": "优先主力兵种和部队加成",
+    "goalPercent": "最大化百分比总和",
+    "inventoryHint": "请输入全部宝石库存。优化器会自动为棋盘选择不超过35颗宝石。",
+    "usedStones": "已使用宝石",
+    "reserveStones": "库存余量",
+    "heuristicWarning": "这是在较短搜索时间内找到的最佳结果，并非数学意义上的绝对最优。再次运行可能得到更好的结果。"
   }
 };
 
-let currentLanguage = localStorage.getItem("bkryLanguage") ||
+function readStoredLanguage() {
+  try {
+    return localStorage.getItem("bkryLanguage");
+  } catch {
+    return null;
+  }
+}
+
+function storeLanguage(language) {
+  try {
+    localStorage.setItem("bkryLanguage", language);
+  } catch {
+    // Storage can be unavailable in private or embedded browser contexts.
+  }
+}
+
+let currentLanguage = readStoredLanguage() ||
   ((navigator.language || "de").slice(0,2).toLowerCase());
 if (!translations[currentLanguage]) currentLanguage = "en";
 
@@ -896,7 +1036,7 @@ function profileName(profile) {
 }
 function applyLanguage(lang) {
   currentLanguage = translations[lang] ? lang : "en";
-  localStorage.setItem("bkryLanguage", currentLanguage);
+  storeLanguage(currentLanguage);
   document.documentElement.lang = currentLanguage;
   document.getElementById("languageSelect").value = currentLanguage;
   document.getElementById("subtitle").textContent = tr("subtitle");
@@ -912,20 +1052,26 @@ function applyLanguage(lang) {
   document.getElementById("profileArch").textContent = tr("archers");
   document.getElementById("profileInf").textContent = tr("infantry");
   document.getElementById("profileAll").textContent = tr("balanced");
+  document.getElementById("goalLabel").textContent = tr("goalLabel");
+  document.getElementById("goalCount").textContent = tr("goalCount");
+  document.getElementById("goalFocus").textContent = tr("goalFocus");
+  document.getElementById("goalPercent").textContent = tr("goalPercent");
+  document.getElementById("inventoryHint").textContent = tr("inventoryHint");
   document.getElementById("solveButton").textContent = tr("optimize");
   document.getElementById("copyButton").textContent = tr("copy");
   document.getElementById("bestLayoutTitle").textContent = tr("bestLayout");
   document.getElementById("discordOutputTitle").textContent = tr("discordOutput");
-  document.getElementById("solverNote").textContent = tr("note");
-  if (window.lastResult) renderResult(window.lastResult.result, window.lastResult.profile);
+  document.getElementById("solverNote").textContent = tr("heuristicWarning");
+  if (window.lastResult) renderResult(window.lastResult.result, window.lastResult.profile, window.lastResult.goal, window.lastResult.inventory);
 }
 
 const ROWS = 5;
 const COLS = 7;
 const CELLS = ROWS * COLS;
+const COLORS = ["R", "Y", "G", "P", "B"];
 
-const MAX_RESTARTS = 10;
-const MAX_ITERATIONS = 5000;
+const MAX_RESTARTS = 14;
+const MAX_ITERATIONS = 6000;
 const MAX_RUNTIME_MS = 500;
 
 const emoji = {
@@ -937,10 +1083,6 @@ const emoji = {
   E: "⬛"
 };
 
-/*
-  Jede Kombination kann horizontal oder vertikal genau einmal aktiviert werden.
-  Die Bonusgruppen werden über das gewählte Haupttruppen-Profil unterschiedlich gewichtet.
-*/
 const bonuses = [
   { key:"archerDef10V", orientation:"V", sequence:"RYP", value:10, group:"arch" },
   { key:"infDef10V", orientation:"V", sequence:"GYP", value:10, group:"inf" },
@@ -968,65 +1110,59 @@ const bonuses = [
 ];
 
 function getWeights(profile) {
-  /*
-    Allgemeine Truppenboni sind für jede Haupttruppe sehr wertvoll.
-    Boni der gewählten Haupttruppe werden klar bevorzugt.
-    Fremde Truppengattungen zählen nur als nützlicher Beifang.
-  */
   switch (profile) {
     case "cav":
-      return { troop: 120, cav: 100, arch: 8, inf: 8 };
+      return { troop: 12, cav: 10, arch: 1, inf: 1 };
     case "arch":
-      return { troop: 120, arch: 100, cav: 8, inf: 8 };
+      return { troop: 12, arch: 10, cav: 1, inf: 1 };
     case "inf":
-      return { troop: 120, inf: 100, cav: 8, arch: 8 };
+      return { troop: 12, inf: 10, cav: 1, arch: 1 };
     default:
-      return { troop: 20, cav: 20, arch: 20, inf: 20 };
+      return { troop: 5, cav: 5, arch: 5, inf: 5 };
   }
 }
 
-function isBonusActive(grid, bonus) {
+function getPlacements(bonus) {
+  const placements = [];
   const length = bonus.sequence.length;
 
   if (bonus.orientation === "H") {
     for (let row = 0; row < ROWS; row++) {
       for (let col = 0; col <= COLS - length; col++) {
-        let matches = true;
-
-        for (let offset = 0; offset < length; offset++) {
-          if (grid[row * COLS + col + offset] !== bonus.sequence[offset]) {
-            matches = false;
-            break;
-          }
-        }
-
-        if (matches) return true;
+        placements.push(Array.from({length}, (_, offset) => ({
+          index: row * COLS + col + offset,
+          color: bonus.sequence[offset]
+        })));
       }
     }
   } else {
     for (let row = 0; row <= ROWS - length; row++) {
       for (let col = 0; col < COLS; col++) {
-        let matches = true;
-
-        for (let offset = 0; offset < length; offset++) {
-          if (grid[(row + offset) * COLS + col] !== bonus.sequence[offset]) {
-            matches = false;
-            break;
-          }
-        }
-
-        if (matches) return true;
+        placements.push(Array.from({length}, (_, offset) => ({
+          index: (row + offset) * COLS + col,
+          color: bonus.sequence[offset]
+        })));
       }
     }
   }
 
-  return false;
+  return placements;
 }
 
-function evaluateLayout(grid, profile) {
+bonuses.forEach(bonus => {
+  bonus.placements = getPlacements(bonus);
+});
+
+function isBonusActive(grid, bonus) {
+  return bonus.placements.some(placement =>
+    placement.every(cell => grid[cell.index] === cell.color)
+  );
+}
+
+function evaluateLayout(grid, profile, goal) {
   const weights = getWeights(profile);
   const active = [];
-  let weightedScore = 0;
+  let relevanceScore = 0;
   let rawBonusTotal = 0;
   let activeCount = 0;
 
@@ -1037,76 +1173,301 @@ function evaluateLayout(grid, profile) {
     if (enabled) {
       activeCount++;
       rawBonusTotal += bonus.value;
-      weightedScore += bonus.value * weights[bonus.group];
+      relevanceScore += bonus.value * weights[bonus.group];
     }
   }
 
+  let rank;
+  if (goal === "focus") {
+    rank = [relevanceScore, activeCount, rawBonusTotal];
+  } else if (goal === "percent") {
+    rank = [rawBonusTotal, relevanceScore, activeCount];
+  } else {
+    rank = [activeCount, relevanceScore, rawBonusTotal];
+  }
+
   return {
-    weightedScore,
+    rank,
+    relevanceScore,
     rawBonusTotal,
     activeCount,
     active
   };
 }
 
-function isBetter(candidate, currentBest) {
-  if (!currentBest) return true;
-
-  if (candidate.weightedScore !== currentBest.weightedScore) {
-    return candidate.weightedScore > currentBest.weightedScore;
+function compareRank(left, right) {
+  if (!right) return 1;
+  for (let index = 0; index < left.length; index++) {
+    if (left[index] !== right[index]) {
+      return left[index] > right[index] ? 1 : -1;
+    }
   }
+  return 0;
+}
 
-  if (candidate.rawBonusTotal !== currentBest.rawBonusTotal) {
-    return candidate.rawBonusTotal > currentBest.rawBonusTotal;
+function annealingScore(evaluation, goal) {
+  if (goal === "focus") {
+    return evaluation.relevanceScore / 100 + evaluation.activeCount * 0.25;
   }
+  if (goal === "percent") {
+    return evaluation.rawBonusTotal / 5 + evaluation.activeCount * 0.1;
+  }
+  return evaluation.activeCount * 10 +
+    evaluation.relevanceScore / 1000 +
+    evaluation.rawBonusTotal / 1000;
+}
 
-  return candidate.activeCount > currentBest.activeCount;
+function cloneState(state) {
+  return {
+    grid: [...state.grid],
+    reserve: { ...state.reserve }
+  };
+}
+
+function totalCount(counts) {
+  return COLORS.reduce((sum, color) => sum + counts[color], 0);
+}
+
+function weightedRandomColor(counts) {
+  const total = totalCount(counts);
+  if (total <= 0) return null;
+
+  let roll = Math.random() * total;
+  for (const color of COLORS) {
+    roll -= counts[color];
+    if (roll < 0) return color;
+  }
+  return COLORS[COLORS.length - 1];
 }
 
 function shuffle(array) {
-  for (let i = array.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [array[i], array[j]] = [array[j], array[i]];
+  for (let index = array.length - 1; index > 0; index--) {
+    const other = Math.floor(Math.random() * (index + 1));
+    [array[index], array[other]] = [array[other], array[index]];
   }
   return array;
 }
 
-function createRandomLayout(stoneBag) {
-  return shuffle([...stoneBag]);
+function createRandomState(inventory) {
+  const reserve = { ...inventory };
+  const grid = Array(CELLS).fill("E");
+  const usedSlots = Math.min(totalCount(inventory), CELLS);
+
+  for (let index = 0; index < usedSlots; index++) {
+    const color = weightedRandomColor(reserve);
+    grid[index] = color;
+    reserve[color]--;
+  }
+
+  shuffle(grid);
+  return { grid, reserve };
 }
 
-function buildStoneBag(counts) {
-  const bag = [];
+function placementCost(state, placement) {
+  let changes = 0;
+  let overlap = 0;
 
-  for (const color of ["R", "Y", "G", "P", "B"]) {
-    for (let i = 0; i < counts[color]; i++) {
-      bag.push(color);
+  for (const cell of placement) {
+    if (state.grid[cell.index] === cell.color) {
+      overlap++;
+    } else {
+      changes++;
     }
   }
 
-  while (bag.length < CELLS) {
-    bag.push("E");
-  }
-
-  return bag;
+  return changes * 10 - overlap * 3 + Math.random();
 }
 
-function optimizeLayout(stoneBag, profile) {
-  const startTime = performance.now();
+function applyPlacement(state, placement) {
+  const candidate = cloneState(state);
+  const targetIndexes = new Set(placement.map(cell => cell.index));
 
-  let globalBestGrid = null;
-  let globalBestEvaluation = null;
+  for (const cell of placement) {
+    if (candidate.grid[cell.index] === cell.color) continue;
+
+    let sourceIndex = -1;
+    for (let index = 0; index < CELLS; index++) {
+      if (!targetIndexes.has(index) && candidate.grid[index] === cell.color) {
+        sourceIndex = index;
+        break;
+      }
+    }
+
+    if (sourceIndex >= 0) {
+      [candidate.grid[cell.index], candidate.grid[sourceIndex]] =
+        [candidate.grid[sourceIndex], candidate.grid[cell.index]];
+      continue;
+    }
+
+    if (candidate.reserve[cell.color] > 0) {
+      const oldColor = candidate.grid[cell.index];
+      candidate.reserve[cell.color]--;
+
+      if (oldColor !== "E") {
+        candidate.reserve[oldColor]++;
+      }
+
+      candidate.grid[cell.index] = cell.color;
+      continue;
+    }
+
+    return null;
+  }
+
+  return candidate;
+}
+
+function fillEmptyCells(state) {
+  const candidate = cloneState(state);
+
+  for (let index = 0; index < CELLS; index++) {
+    if (candidate.grid[index] !== "E") continue;
+
+    const color = weightedRandomColor(candidate.reserve);
+    if (!color) break;
+
+    candidate.grid[index] = color;
+    candidate.reserve[color]--;
+  }
+
+  return candidate;
+}
+
+function createConstructiveState(inventory, profile, goal) {
+  let state = {
+    grid: Array(CELLS).fill("E"),
+    reserve: { ...inventory }
+  };
+
+  const weights = getWeights(profile);
+  const orderedBonuses = [...bonuses].sort((left, right) => {
+    const leftPriority =
+      goal === "count" ? 100 :
+      goal === "percent" ? left.value :
+      left.value * weights[left.group];
+
+    const rightPriority =
+      goal === "count" ? 100 :
+      goal === "percent" ? right.value :
+      right.value * weights[right.group];
+
+    return (rightPriority + Math.random() * 20) -
+      (leftPriority + Math.random() * 20);
+  });
+
+  for (const bonus of orderedBonuses) {
+    const possible = bonus.placements
+      .map(placement => ({
+        placement,
+        cost: placementCost(state, placement)
+      }))
+      .sort((left, right) => left.cost - right.cost);
+
+    const sampleSize = Math.min(6, possible.length);
+    let chosen = null;
+
+    for (let attempt = 0; attempt < sampleSize; attempt++) {
+      const candidate = applyPlacement(state, possible[attempt].placement);
+      if (candidate) {
+        chosen = candidate;
+        break;
+      }
+    }
+
+    if (chosen) {
+      state = chosen;
+    }
+  }
+
+  return fillEmptyCells(state);
+}
+
+function mutateState(state) {
+  const candidate = cloneState(state);
+  const roll = Math.random();
+
+  if (roll < 0.48) {
+    const first = Math.floor(Math.random() * CELLS);
+    const second = Math.floor(Math.random() * CELLS);
+
+    if (first !== second) {
+      [candidate.grid[first], candidate.grid[second]] =
+        [candidate.grid[second], candidate.grid[first]];
+    }
+    return candidate;
+  }
+
+  if (roll < 0.75 && totalCount(candidate.reserve) > 0) {
+    const index = Math.floor(Math.random() * CELLS);
+    const newColor = weightedRandomColor(candidate.reserve);
+
+    if (newColor) {
+      const oldColor = candidate.grid[index];
+      candidate.reserve[newColor]--;
+
+      if (oldColor !== "E") {
+        candidate.reserve[oldColor]++;
+      }
+
+      candidate.grid[index] = newColor;
+    }
+    return candidate;
+  }
+
+  const bonus = bonuses[Math.floor(Math.random() * bonuses.length)];
+  const placement = bonus.placements[
+    Math.floor(Math.random() * bonus.placements.length)
+  ];
+
+  return applyPlacement(candidate, placement) || candidate;
+}
+
+const bestCache = new Map();
+
+function cacheKey(inventory, profile, goal) {
+  return COLORS.map(color => inventory[color]).join("-") +
+    `|${profile}|${goal}`;
+}
+
+function optimizeLayout(inventory, profile, goal) {
+  const startTime = performance.now();
+  const key = cacheKey(inventory, profile, goal);
+
+  let globalBestState = bestCache.has(key)
+    ? cloneState(bestCache.get(key).state)
+    : null;
+
+  let globalBestEvaluation = bestCache.has(key)
+    ? evaluateLayout(globalBestState.grid, profile, goal)
+    : null;
+
   let completedRestarts = 0;
   let completedIterations = 0;
 
   for (let restart = 0; restart < MAX_RESTARTS; restart++) {
     if (performance.now() - startTime >= MAX_RUNTIME_MS) break;
 
-    let currentGrid = createRandomLayout(stoneBag);
-    let currentEvaluation = evaluateLayout(currentGrid, profile);
+    let currentState;
 
-    if (isBetter(currentEvaluation, globalBestEvaluation)) {
-      globalBestGrid = [...currentGrid];
+    if (restart === 0 && globalBestState) {
+      currentState = cloneState(globalBestState);
+    } else if (restart % 2 === 0) {
+      currentState = createConstructiveState(inventory, profile, goal);
+    } else {
+      currentState = createRandomState(inventory);
+    }
+
+    let currentEvaluation = evaluateLayout(
+      currentState.grid,
+      profile,
+      goal
+    );
+
+    if (compareRank(
+      currentEvaluation.rank,
+      globalBestEvaluation && globalBestEvaluation.rank
+    ) > 0) {
+      globalBestState = cloneState(currentState);
       globalBestEvaluation = currentEvaluation;
     }
 
@@ -1115,48 +1476,49 @@ function optimizeLayout(stoneBag, profile) {
 
       completedIterations++;
 
-      const first = Math.floor(Math.random() * CELLS);
-      let second = Math.floor(Math.random() * CELLS);
+      const candidateState = mutateState(currentState);
+      const candidateEvaluation = evaluateLayout(
+        candidateState.grid,
+        profile,
+        goal
+      );
 
-      if (first === second || currentGrid[first] === currentGrid[second]) {
-        continue;
+      const currentSearchScore = annealingScore(currentEvaluation, goal);
+      const candidateSearchScore = annealingScore(candidateEvaluation, goal);
+      const delta = candidateSearchScore - currentSearchScore;
+      const progress = iteration / MAX_ITERATIONS;
+      const temperature = Math.max(0.15, 3.0 * (1 - progress));
+
+      if (
+        delta >= 0 ||
+        Math.random() < Math.exp(delta / temperature)
+      ) {
+        currentState = candidateState;
+        currentEvaluation = candidateEvaluation;
       }
 
-      [currentGrid[first], currentGrid[second]] =
-        [currentGrid[second], currentGrid[first]];
-
-      const candidateEvaluation = evaluateLayout(currentGrid, profile);
-
-      /*
-        Reines Hill-Climbing:
-        Nur gleich gute oder bessere Zustände bleiben bestehen.
-        Gleich gute Zustände dürfen bleiben, damit das Verfahren Plateaus durchqueren kann.
-      */
-      const keepCandidate =
-        candidateEvaluation.weightedScore > currentEvaluation.weightedScore ||
-        (
-          candidateEvaluation.weightedScore === currentEvaluation.weightedScore &&
-          candidateEvaluation.rawBonusTotal >= currentEvaluation.rawBonusTotal
-        );
-
-      if (keepCandidate) {
-        currentEvaluation = candidateEvaluation;
-
-        if (isBetter(currentEvaluation, globalBestEvaluation)) {
-          globalBestGrid = [...currentGrid];
-          globalBestEvaluation = currentEvaluation;
-        }
-      } else {
-        [currentGrid[first], currentGrid[second]] =
-          [currentGrid[second], currentGrid[first]];
+      if (compareRank(
+        candidateEvaluation.rank,
+        globalBestEvaluation && globalBestEvaluation.rank
+      ) > 0) {
+        globalBestState = cloneState(candidateState);
+        globalBestEvaluation = candidateEvaluation;
       }
     }
 
     completedRestarts++;
   }
 
+  if (globalBestState) {
+    bestCache.set(key, {
+      state: cloneState(globalBestState),
+      evaluation: globalBestEvaluation
+    });
+  }
+
   return {
-    grid: globalBestGrid,
+    grid: globalBestState && globalBestState.grid,
+    reserve: globalBestState && globalBestState.reserve,
     evaluation: globalBestEvaluation,
     elapsedMs: performance.now() - startTime,
     completedRestarts,
@@ -1176,24 +1538,18 @@ function readCounts() {
 
 function validateCounts(counts) {
   for (const [color, amount] of Object.entries(counts)) {
-    if (!Number.isInteger(amount) || amount < 0 || amount > CELLS) {
+    if (!Number.isInteger(amount) || amount < 0 || amount > 999) {
       throw new Error(`${tr("invalid")} ${color}.`);
     }
   }
 
-  const total = Object.values(counts).reduce((sum, amount) => sum + amount, 0);
-
-  if (total > CELLS) {
-    throw new Error(tr("tooMany"));
-  }
-
-  return total;
+  return totalCount(counts);
 }
 
 window.lastResult = null;
 
-function renderResult(result, profile) {
-  window.lastResult = { result, profile };
+function renderResult(result, profile, goal, inventory) {
+  window.lastResult = { result, profile, goal, inventory };
   const gridElement = document.getElementById("grid");
   const bonusElement = document.getElementById("bonuses");
   const scoreElement = document.getElementById("score");
@@ -1213,7 +1569,21 @@ function renderResult(result, profile) {
   scoreElement.innerHTML =
     `<b>${tr("activeBonuses")}:</b> ${result.evaluation.activeCount}` +
     ` &nbsp; | &nbsp; <b>${tr("activePercent")}:</b> ${result.evaluation.rawBonusTotal}` +
-    ` &nbsp; | &nbsp; <b>${tr("profileScore")}:</b> ${result.evaluation.weightedScore}`;
+    ` &nbsp; | &nbsp; <b>${tr("profileScore")}:</b> ${result.evaluation.relevanceScore}`;
+
+  const used = { R:0, Y:0, G:0, P:0, B:0 };
+  result.grid.forEach(stone => {
+    if (used[stone] !== undefined) used[stone]++;
+  });
+
+  const usedText = COLORS.map(color => `${emoji[color]} ${used[color]}`).join("  ");
+  const reserveText = COLORS.map(color =>
+    `${emoji[color]} ${Math.max(0, inventory[color] - used[color])}`
+  ).join("  ");
+
+  document.getElementById("inventorySummary").innerHTML =
+    `<b>${tr("usedStones")}:</b> ${usedText}<br>` +
+    `<b>${tr("reserveStones")}:</b> ${reserveText}`;
 
   let bonusHtml = `<h3>${tr("overview")}</h3>`;
 
@@ -1229,8 +1599,9 @@ function renderResult(result, profile) {
   bonusElement.innerHTML = bonusHtml;
 
   const shareLines = [
-    "**BKRY Solver v1.3 Global Edition**",
+    "**BKRY Solver v1.4 Beta**",
     `**${tr("mainTroop")}:** ${profileName(profile)}`,
+    `**${tr("goalLabel")}:** ${tr(goal === "count" ? "goalCount" : goal === "focus" ? "goalFocus" : "goalPercent")}`,
     ""
   ];
 
@@ -1276,14 +1647,14 @@ function solve() {
         validateCounts(counts);
 
         const profile = document.getElementById("profile").value;
-        const stoneBag = buildStoneBag(counts);
-        const result = optimizeLayout(stoneBag, profile);
+        const goal = document.getElementById("goal").value;
+        const result = optimizeLayout(counts, profile, goal);
 
         if (!result.grid || !result.evaluation) {
           throw new Error(tr("noLayout"));
         }
 
-        renderResult(result, profile);
+        renderResult(result, profile, goal, counts);
       } catch (error) {
         statusElement.textContent = "";
         alert(error.message);
@@ -1321,7 +1692,7 @@ document.getElementById("languageSelect").addEventListener("change", event => {
 applyLanguage(currentLanguage);
 solve();
 </script>
-  <footer style="
+<footer style="
 margin-top:40px;
 padding:20px;
 text-align:center;
@@ -1329,26 +1700,10 @@ font-size:14px;
 color:#999;
 border-top:1px solid #333;
 ">
-
 <strong>BKRY Hero Specialty Solver</strong><br>
-
-Made with ❤️ by <a href="https://bkry-id.github.io/https-bkry.github.io-bkry-tools-" target="_blank" style="color:#bb86fc;text-decoration:none;"><strong>BKRY</strong></a><br><br>
-
-© 2026 BKRY • All rights reserved.<br>
-
-Version 1.3 • Global Edition
-
-    <br><br>
-
-<span style="font-size:12px;color:#777;">
-Suggestions? Found a bug?<br>
-<a href="https://github.com/BKRY-ID/https-bkry.github.io-bkry-tools-/issues"
-target="_blank"
-style="color:#bb86fc;text-decoration:none;">
-Open an issue on GitHub
-</a>
-</span>
-    
+Made with ❤️ by <strong>BKRY</strong><br><br>
+© 2026 BKRY • All rights reserved<br>
+Version 1.4 • Beta
 </footer>
 </body>
 </html>
