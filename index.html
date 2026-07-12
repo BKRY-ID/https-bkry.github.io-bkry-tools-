@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>BKRY Solver v1.4 Beta</title>
+<title>BKRY Solver v1.5 Beta</title>
 <style>
   :root { color-scheme: dark; }
   body{
@@ -85,10 +85,30 @@
   }
   .note{color:#bbb;font-size:14px;line-height:1.45}
   .status{margin-top:10px;color:#cfcfcf}
+  .search-options{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:10px 0}
+  .radio-card,.toggle-card{display:flex;align-items:flex-start;gap:9px;padding:11px;border:1px solid #444;border-radius:10px;background:#202020;cursor:pointer}
+  .radio-card input,.toggle-card input{width:auto;margin:3px 0 0;accent-color:#9bd09b}
+  .radio-card span,.toggle-card span{line-height:1.35}
+  .small{display:block;color:#aaa;font-size:13px;margin-top:2px}
+  .hidden{display:none !important}
+  .current-panel{margin-top:14px;padding:14px;border:1px solid #3d3d3d;border-radius:10px;background:#171717}
+  .palette{display:flex;flex-wrap:wrap;gap:7px;margin:10px 0}
+  .palette button{margin:0;min-width:48px;padding:8px 10px}
+  .palette button.selected{outline:3px solid #ddd;outline-offset:1px;background:#3a3a3a}
+  .editable-grid .cell{cursor:pointer;user-select:none;transition:transform .08s,border-color .08s}
+  .editable-grid .cell:hover{transform:scale(1.04);border-color:#aaa}
+  .current-summary,.comparison{padding:10px 12px;border-radius:9px;background:#222;margin:10px 0;line-height:1.5}
+  .comparison.good{border-left:5px solid #8fd18f}
+  .comparison.neutral{border-left:5px solid #d0bd73}
+  .current-status.error{color:#ffaaaa}
+  .current-status.ok{color:#aee3ae}
+  .current-status{margin:8px 0;line-height:1.4}
+  button:disabled{opacity:.55;cursor:wait}
   @media(max-width:560px){
     .topbar{flex-direction:column}
     .langbox{width:100%}
     .counts{grid-template-columns:repeat(2,1fr)}
+    .search-options{grid-template-columns:1fr}
     .grid{grid-template-columns:repeat(7,39px)}
     .cell{width:39px;height:39px;font-size:22px}
   }
@@ -97,7 +117,7 @@
 <body>
 <div class="topbar">
   <div>
-    <h1>BKRY Solver v1.4 Beta</h1>
+    <h1>BKRY Solver v1.5 Beta</h1>
     <p class="sub" id="subtitle">7 × 5 Heldenstein-Optimierer für Puzzles & Chaos</p>
   </div>
   <div class="langbox">
@@ -165,6 +185,43 @@
 
   <p class="note" id="inventoryHint">Gib deinen gesamten Steinbestand ein. Der Solver wählt automatisch höchstens 35 Steine für das Feld aus.</p>
 
+  <div>
+    <strong id="searchModeLabel">Suchmodus</strong>
+    <div class="search-options">
+      <label class="radio-card">
+        <input type="radio" name="searchMode" value="quick" checked>
+        <span><b id="quickSearchLabel">Schnellsuche</b><span class="small" id="quickSearchHint">Etwa 0,5 Sekunden</span></span>
+      </label>
+      <label class="radio-card">
+        <input type="radio" name="searchMode" value="intensive">
+        <span><b id="intensiveSearchLabel">Intensivsuche</b><span class="small" id="intensiveSearchHint">Bis zu 8 Sekunden, gründlichere Suche</span></span>
+      </label>
+    </div>
+  </div>
+
+  <label class="toggle-card">
+    <input id="useCurrentLayout" type="checkbox">
+    <span><b id="useCurrentLayoutLabel">Bestehende Anordnung eingeben (optional)</b><span class="small" id="useCurrentLayoutHint">Ohne Häkchen berechnet der Solver nur aus deinem Steinbestand.</span></span>
+  </label>
+
+  <div id="currentLayoutPanel" class="current-panel hidden">
+    <h3 id="currentLayoutTitle">Aktuelle Anordnung</h3>
+    <p class="note" id="currentLayoutInstruction">Wähle eine Farbe und tippe die entsprechenden Felder an. Mit „Leer“ kannst du ein Feld wieder löschen.</p>
+    <div><strong id="paletteLabel">Farbe auswählen</strong></div>
+    <div id="currentPalette" class="palette">
+      <button type="button" data-color="R">🟥</button>
+      <button type="button" data-color="Y">🟨</button>
+      <button type="button" data-color="G">🟩</button>
+      <button type="button" data-color="P">🟪</button>
+      <button type="button" data-color="B">🟦</button>
+      <button type="button" data-color="E" id="emptyPaletteButton">⬛ Leer</button>
+    </div>
+    <div id="currentGrid" class="grid editable-grid"></div>
+    <button type="button" id="clearCurrentButton">Anordnung leeren</button>
+    <div id="currentLayoutStatus" class="current-status"></div>
+    <div id="currentLayoutSummary" class="current-summary"></div>
+  </div>
+
   <button class="primary" id="solveButton">Optimieren</button>
   <button id="copyButton">Discord-Text kopieren</button>
   <div id="status" class="status"></div>
@@ -172,6 +229,7 @@
 
 <div class="panel">
   <h2 id="bestLayoutTitle">Beste gefundene Anordnung</h2>
+  <div id="comparison"></div>
   <div id="score"></div>
   <div id="inventorySummary" class="note"></div>
   <div id="grid" class="grid"></div>
@@ -1005,6 +1063,157 @@ const translations = {
   }
 };
 
+const featureTranslations = {
+  de: {
+    searchModeLabel: "Suchmodus",
+    quickSearch: "Schnellsuche",
+    quickSearchHint: "Etwa 0,5 Sekunden",
+    intensiveSearch: "Intensivsuche",
+    intensiveSearchHint: "Bis zu 8 Sekunden, gründlichere Suche",
+    useCurrentLayout: "Bestehende Anordnung eingeben (optional)",
+    useCurrentLayoutHint: "Ohne Häkchen berechnet der Solver nur aus deinem Steinbestand.",
+    currentLayoutTitle: "Aktuelle Anordnung",
+    currentLayoutInstruction: "Wähle eine Farbe und tippe die entsprechenden Felder an. Mit „Leer“ kannst du ein Feld wieder löschen.",
+    paletteLabel: "Farbe auswählen",
+    empty: "Leer",
+    clearLayout: "Anordnung leeren",
+    currentProgress: "Belegte Felder: {filled} von {required}",
+    currentComplete: "Die aktuelle Anordnung ist vollständig und wird als Mindeststandard verwendet.",
+    currentIncomplete: "Bitte fülle noch {missing} Feld(er), damit die bestehende Anordnung verwendet werden kann.",
+    currentTooManyColor: "Die aktuelle Anordnung verwendet mehr {color}-Steine als im Bestand eingetragen.",
+    currentSummary: "Aktuell erkannt",
+    comparisonCurrent: "Aktuelle Anordnung",
+    comparisonFound: "Bestes Ergebnis",
+    improvementFound: "Verbesserung gefunden.",
+    noImprovement: "Keine bessere Anordnung gefunden. Deine aktuelle Anordnung bleibt die beste bekannte Lösung.",
+    equivalentFound: "Eine gleichwertige Alternative wurde gefunden. Deine aktuelle Anordnung ist nicht schlechter.",
+    currentRequired: "Die bestehende Anordnung ist aktiviert, aber noch nicht vollständig oder nicht mit dem Bestand vereinbar.",
+    searchMode: "Suchmodus",
+    quick: "Schnell",
+    intensive: "Intensiv",
+    optimizingQuick: "Schnellsuche läuft…",
+    optimizingIntensive: "Intensivsuche läuft… bitte einen Moment warten.",
+    currentUsed: "Bestehende Anordnung als Ausgangspunkt: Ja",
+    currentNotUsed: "Bestehende Anordnung als Ausgangspunkt: Nein"
+  },
+  en: {
+    searchModeLabel: "Search mode", quickSearch: "Quick search", quickSearchHint: "About 0.5 seconds",
+    intensiveSearch: "Intensive search", intensiveSearchHint: "Up to 8 seconds, more thorough search",
+    useCurrentLayout: "Enter existing layout (optional)", useCurrentLayoutHint: "Leave unchecked to calculate only from your stone inventory.",
+    currentLayoutTitle: "Current layout", currentLayoutInstruction: "Choose a color and tap the matching cells. Use “Empty” to clear a cell.",
+    paletteLabel: "Choose color", empty: "Empty", clearLayout: "Clear layout",
+    currentProgress: "Filled cells: {filled} of {required}", currentComplete: "The current layout is complete and will be used as the minimum standard.",
+    currentIncomplete: "Fill {missing} more cell(s) to use the existing layout.", currentTooManyColor: "The current layout uses more {color} stones than entered in the inventory.",
+    currentSummary: "Currently detected", comparisonCurrent: "Current layout", comparisonFound: "Best result", improvementFound: "Improvement found.",
+    noImprovement: "No better layout was found. Your current layout remains the best known solution.", equivalentFound: "An equally strong alternative was found. Your current layout is not worse.",
+    currentRequired: "The existing layout option is enabled, but the layout is incomplete or does not match the inventory.",
+    searchMode: "Search mode", quick: "Quick", intensive: "Intensive", optimizingQuick: "Quick search running…", optimizingIntensive: "Intensive search running… please wait.",
+    currentUsed: "Existing layout used as starting point: Yes", currentNotUsed: "Existing layout used as starting point: No"
+  },
+  ru: {
+    searchModeLabel: "Режим поиска", quickSearch: "Быстрый поиск", quickSearchHint: "Около 0,5 секунды", intensiveSearch: "Углублённый поиск", intensiveSearchHint: "До 8 секунд, более тщательный поиск",
+    useCurrentLayout: "Ввести текущую расстановку (необязательно)", useCurrentLayoutHint: "Без отметки расчёт выполняется только по запасу камней.", currentLayoutTitle: "Текущая расстановка",
+    currentLayoutInstruction: "Выберите цвет и нажмите соответствующие клетки. Кнопка «Пусто» очищает клетку.", paletteLabel: "Выберите цвет", empty: "Пусто", clearLayout: "Очистить расстановку",
+    currentProgress: "Заполнено клеток: {filled} из {required}", currentComplete: "Текущая расстановка завершена и будет использована как минимальный стандарт.", currentIncomplete: "Заполните ещё {missing} клеток, чтобы использовать текущую расстановку.",
+    currentTooManyColor: "В текущей расстановке больше камней цвета {color}, чем указано в запасе.", currentSummary: "Текущий результат", comparisonCurrent: "Текущая расстановка", comparisonFound: "Лучший результат",
+    improvementFound: "Найдено улучшение.", noImprovement: "Лучшая расстановка не найдена. Текущая остаётся лучшим известным вариантом.", equivalentFound: "Найден равноценный вариант. Текущая расстановка не хуже.",
+    currentRequired: "Опция текущей расстановки включена, но поле не заполнено или не соответствует запасу.", searchMode: "Режим поиска", quick: "Быстрый", intensive: "Углублённый", optimizingQuick: "Идёт быстрый поиск…", optimizingIntensive: "Идёт углублённый поиск… подождите.", currentUsed: "Текущая расстановка используется: Да", currentNotUsed: "Текущая расстановка используется: Нет"
+  },
+  es: {
+    searchModeLabel: "Modo de búsqueda", quickSearch: "Búsqueda rápida", quickSearchHint: "Aproximadamente 0,5 segundos", intensiveSearch: "Búsqueda intensiva", intensiveSearchHint: "Hasta 8 segundos, búsqueda más exhaustiva",
+    useCurrentLayout: "Introducir disposición actual (opcional)", useCurrentLayoutHint: "Sin marcar, el cálculo usa únicamente tu inventario de piedras.", currentLayoutTitle: "Disposición actual", currentLayoutInstruction: "Elige un color y toca las casillas correspondientes. Usa “Vacío” para borrar una casilla.",
+    paletteLabel: "Elegir color", empty: "Vacío", clearLayout: "Vaciar disposición", currentProgress: "Casillas ocupadas: {filled} de {required}", currentComplete: "La disposición actual está completa y se usará como referencia mínima.",
+    currentIncomplete: "Completa {missing} casilla(s) más para usar la disposición actual.", currentTooManyColor: "La disposición actual usa más piedras {color} de las indicadas en el inventario.", currentSummary: "Resultado actual", comparisonCurrent: "Disposición actual", comparisonFound: "Mejor resultado",
+    improvementFound: "Se encontró una mejora.", noImprovement: "No se encontró una disposición mejor. Tu disposición actual sigue siendo la mejor solución conocida.", equivalentFound: "Se encontró una alternativa equivalente. Tu disposición actual no es peor.",
+    currentRequired: "La disposición actual está activada, pero está incompleta o no coincide con el inventario.", searchMode: "Modo de búsqueda", quick: "Rápida", intensive: "Intensiva", optimizingQuick: "Búsqueda rápida en curso…", optimizingIntensive: "Búsqueda intensiva en curso… espera un momento.", currentUsed: "Disposición actual usada como punto de partida: Sí", currentNotUsed: "Disposición actual usada como punto de partida: No"
+  },
+  pt: {
+    searchModeLabel: "Modo de busca", quickSearch: "Busca rápida", quickSearchHint: "Cerca de 0,5 segundos", intensiveSearch: "Busca intensiva", intensiveSearchHint: "Até 8 segundos, busca mais completa",
+    useCurrentLayout: "Inserir disposição atual (opcional)", useCurrentLayoutHint: "Sem marcar, o cálculo usa apenas o seu estoque de pedras.", currentLayoutTitle: "Disposição atual", currentLayoutInstruction: "Escolha uma cor e toque nas casas correspondentes. Use “Vazio” para limpar uma casa.",
+    paletteLabel: "Escolher cor", empty: "Vazio", clearLayout: "Limpar disposição", currentProgress: "Casas preenchidas: {filled} de {required}", currentComplete: "A disposição atual está completa e será usada como padrão mínimo.", currentIncomplete: "Preencha mais {missing} casa(s) para usar a disposição atual.",
+    currentTooManyColor: "A disposição atual usa mais pedras {color} do que o estoque informado.", currentSummary: "Resultado atual", comparisonCurrent: "Disposição atual", comparisonFound: "Melhor resultado", improvementFound: "Melhoria encontrada.",
+    noImprovement: "Nenhuma disposição melhor foi encontrada. A atual continua sendo a melhor solução conhecida.", equivalentFound: "Foi encontrada uma alternativa equivalente. A disposição atual não é pior.", currentRequired: "A disposição atual está ativada, mas está incompleta ou não corresponde ao estoque.",
+    searchMode: "Modo de busca", quick: "Rápida", intensive: "Intensiva", optimizingQuick: "Busca rápida em andamento…", optimizingIntensive: "Busca intensiva em andamento… aguarde.", currentUsed: "Disposição atual usada como ponto de partida: Sim", currentNotUsed: "Disposição atual usada como ponto de partida: Não"
+  },
+  fr: {
+    searchModeLabel: "Mode de recherche", quickSearch: "Recherche rapide", quickSearchHint: "Environ 0,5 seconde", intensiveSearch: "Recherche intensive", intensiveSearchHint: "Jusqu’à 8 secondes, recherche plus approfondie",
+    useCurrentLayout: "Saisir la disposition actuelle (facultatif)", useCurrentLayoutHint: "Sans cocher, le calcul utilise uniquement votre stock de pierres.", currentLayoutTitle: "Disposition actuelle", currentLayoutInstruction: "Choisissez une couleur et touchez les cases correspondantes. Utilisez « Vide » pour effacer une case.",
+    paletteLabel: "Choisir une couleur", empty: "Vide", clearLayout: "Vider la disposition", currentProgress: "Cases remplies : {filled} sur {required}", currentComplete: "La disposition actuelle est complète et servira de référence minimale.", currentIncomplete: "Remplissez encore {missing} case(s) pour utiliser la disposition actuelle.",
+    currentTooManyColor: "La disposition actuelle utilise plus de pierres {color} que le stock indiqué.", currentSummary: "Résultat actuel", comparisonCurrent: "Disposition actuelle", comparisonFound: "Meilleur résultat", improvementFound: "Amélioration trouvée.",
+    noImprovement: "Aucune meilleure disposition n’a été trouvée. La disposition actuelle reste la meilleure solution connue.", equivalentFound: "Une alternative équivalente a été trouvée. La disposition actuelle n’est pas moins bonne.", currentRequired: "La disposition actuelle est activée, mais elle est incomplète ou ne correspond pas au stock.",
+    searchMode: "Mode de recherche", quick: "Rapide", intensive: "Intensive", optimizingQuick: "Recherche rapide en cours…", optimizingIntensive: "Recherche intensive en cours… veuillez patienter.", currentUsed: "Disposition actuelle utilisée comme point de départ : Oui", currentNotUsed: "Disposition actuelle utilisée comme point de départ : Non"
+  },
+  it: {
+    searchModeLabel: "Modalità di ricerca", quickSearch: "Ricerca rapida", quickSearchHint: "Circa 0,5 secondi", intensiveSearch: "Ricerca intensiva", intensiveSearchHint: "Fino a 8 secondi, ricerca più approfondita",
+    useCurrentLayout: "Inserisci disposizione attuale (facoltativo)", useCurrentLayoutHint: "Senza selezione, il calcolo usa solo l’inventario delle pietre.", currentLayoutTitle: "Disposizione attuale", currentLayoutInstruction: "Scegli un colore e tocca le caselle corrispondenti. Usa “Vuoto” per cancellare una casella.",
+    paletteLabel: "Scegli colore", empty: "Vuoto", clearLayout: "Svuota disposizione", currentProgress: "Caselle occupate: {filled} di {required}", currentComplete: "La disposizione attuale è completa e sarà usata come standard minimo.", currentIncomplete: "Compila altre {missing} caselle per usare la disposizione attuale.",
+    currentTooManyColor: "La disposizione attuale usa più pietre {color} di quelle indicate nell’inventario.", currentSummary: "Risultato attuale", comparisonCurrent: "Disposizione attuale", comparisonFound: "Miglior risultato", improvementFound: "Miglioramento trovato.",
+    noImprovement: "Non è stata trovata una disposizione migliore. Quella attuale resta la migliore soluzione conosciuta.", equivalentFound: "È stata trovata un’alternativa equivalente. La disposizione attuale non è peggiore.", currentRequired: "La disposizione attuale è attivata, ma è incompleta o non corrisponde all’inventario.",
+    searchMode: "Modalità di ricerca", quick: "Rapida", intensive: "Intensiva", optimizingQuick: "Ricerca rapida in corso…", optimizingIntensive: "Ricerca intensiva in corso… attendere.", currentUsed: "Disposizione attuale usata come punto di partenza: Sì", currentNotUsed: "Disposizione attuale usata come punto di partenza: No"
+  },
+  nl: {
+    searchModeLabel: "Zoekmodus", quickSearch: "Snel zoeken", quickSearchHint: "Ongeveer 0,5 seconde", intensiveSearch: "Intensief zoeken", intensiveSearchHint: "Tot 8 seconden, grondiger zoeken",
+    useCurrentLayout: "Huidige indeling invoeren (optioneel)", useCurrentLayoutHint: "Zonder vinkje rekent de solver alleen met je stenenvoorraad.", currentLayoutTitle: "Huidige indeling", currentLayoutInstruction: "Kies een kleur en tik de bijbehorende vakken aan. Gebruik ‘Leeg’ om een vak te wissen.",
+    paletteLabel: "Kleur kiezen", empty: "Leeg", clearLayout: "Indeling wissen", currentProgress: "Gevulde vakken: {filled} van {required}", currentComplete: "De huidige indeling is compleet en wordt als minimumstandaard gebruikt.", currentIncomplete: "Vul nog {missing} vak(ken) om de huidige indeling te gebruiken.",
+    currentTooManyColor: "De huidige indeling gebruikt meer {color}-stenen dan in de voorraad is ingevoerd.", currentSummary: "Huidig resultaat", comparisonCurrent: "Huidige indeling", comparisonFound: "Beste resultaat", improvementFound: "Verbetering gevonden.",
+    noImprovement: "Geen betere indeling gevonden. Je huidige indeling blijft de beste bekende oplossing.", equivalentFound: "Een gelijkwaardige variant is gevonden. Je huidige indeling is niet slechter.", currentRequired: "De huidige indeling is ingeschakeld, maar is onvolledig of komt niet overeen met de voorraad.",
+    searchMode: "Zoekmodus", quick: "Snel", intensive: "Intensief", optimizingQuick: "Snel zoeken loopt…", optimizingIntensive: "Intensief zoeken loopt… even geduld.", currentUsed: "Huidige indeling als startpunt gebruikt: Ja", currentNotUsed: "Huidige indeling als startpunt gebruikt: Nee"
+  },
+  pl: {
+    searchModeLabel: "Tryb wyszukiwania", quickSearch: "Szybkie wyszukiwanie", quickSearchHint: "Około 0,5 sekundy", intensiveSearch: "Intensywne wyszukiwanie", intensiveSearchHint: "Do 8 sekund, dokładniejsze wyszukiwanie",
+    useCurrentLayout: "Wprowadź obecny układ (opcjonalnie)", useCurrentLayoutHint: "Bez zaznaczenia obliczenia użyją tylko zapasu kamieni.", currentLayoutTitle: "Obecny układ", currentLayoutInstruction: "Wybierz kolor i dotknij odpowiednich pól. Użyj „Puste”, aby wyczyścić pole.",
+    paletteLabel: "Wybierz kolor", empty: "Puste", clearLayout: "Wyczyść układ", currentProgress: "Wypełnione pola: {filled} z {required}", currentComplete: "Obecny układ jest kompletny i zostanie użyty jako minimalny standard.", currentIncomplete: "Wypełnij jeszcze {missing} pól, aby użyć obecnego układu.",
+    currentTooManyColor: "Obecny układ używa więcej kamieni {color} niż wpisano w zapasie.", currentSummary: "Obecny wynik", comparisonCurrent: "Obecny układ", comparisonFound: "Najlepszy wynik", improvementFound: "Znaleziono poprawę.",
+    noImprovement: "Nie znaleziono lepszego układu. Obecny pozostaje najlepszym znanym rozwiązaniem.", equivalentFound: "Znaleziono równoważną alternatywę. Obecny układ nie jest gorszy.", currentRequired: "Opcja obecnego układu jest włączona, ale układ jest niepełny lub nie pasuje do zapasu.",
+    searchMode: "Tryb wyszukiwania", quick: "Szybkie", intensive: "Intensywne", optimizingQuick: "Trwa szybkie wyszukiwanie…", optimizingIntensive: "Trwa intensywne wyszukiwanie… proszę czekać.", currentUsed: "Obecny układ użyty jako punkt startowy: Tak", currentNotUsed: "Obecny układ użyty jako punkt startowy: Nie"
+  },
+  tr: {
+    searchModeLabel: "Arama modu", quickSearch: "Hızlı arama", quickSearchHint: "Yaklaşık 0,5 saniye", intensiveSearch: "Yoğun arama", intensiveSearchHint: "8 saniyeye kadar, daha ayrıntılı arama",
+    useCurrentLayout: "Mevcut dizilimi gir (isteğe bağlı)", useCurrentLayoutHint: "İşaretlenmezse yalnızca taş envanteriniz kullanılır.", currentLayoutTitle: "Mevcut dizilim", currentLayoutInstruction: "Bir renk seçin ve ilgili hücrelere dokunun. Bir hücreyi silmek için “Boş” seçeneğini kullanın.",
+    paletteLabel: "Renk seç", empty: "Boş", clearLayout: "Dizilimi temizle", currentProgress: "Dolu hücreler: {filled}/{required}", currentComplete: "Mevcut dizilim tamamlandı ve asgari standart olarak kullanılacak.", currentIncomplete: "Mevcut dizilimi kullanmak için {missing} hücre daha doldurun.",
+    currentTooManyColor: "Mevcut dizilim, envanterde belirtilenden daha fazla {color} taşı kullanıyor.", currentSummary: "Mevcut sonuç", comparisonCurrent: "Mevcut dizilim", comparisonFound: "En iyi sonuç", improvementFound: "İyileştirme bulundu.",
+    noImprovement: "Daha iyi bir dizilim bulunamadı. Mevcut diziliminiz bilinen en iyi çözüm olarak kaldı.", equivalentFound: "Eşdeğer bir alternatif bulundu. Mevcut diziliminiz daha kötü değil.", currentRequired: "Mevcut dizilim seçeneği açık, ancak dizilim eksik veya envanterle uyuşmuyor.",
+    searchMode: "Arama modu", quick: "Hızlı", intensive: "Yoğun", optimizingQuick: "Hızlı arama çalışıyor…", optimizingIntensive: "Yoğun arama çalışıyor… lütfen bekleyin.", currentUsed: "Mevcut dizilim başlangıç olarak kullanıldı: Evet", currentNotUsed: "Mevcut dizilim başlangıç olarak kullanıldı: Hayır"
+  },
+  sv: {
+    searchModeLabel: "Sökläge", quickSearch: "Snabbsökning", quickSearchHint: "Cirka 0,5 sekunder", intensiveSearch: "Intensiv sökning", intensiveSearchHint: "Upp till 8 sekunder, grundligare sökning",
+    useCurrentLayout: "Ange nuvarande layout (valfritt)", useCurrentLayoutHint: "Utan markering beräknar verktyget endast från ditt stenlager.", currentLayoutTitle: "Nuvarande layout", currentLayoutInstruction: "Välj en färg och tryck på motsvarande rutor. Använd ”Tom” för att rensa en ruta.",
+    paletteLabel: "Välj färg", empty: "Tom", clearLayout: "Rensa layout", currentProgress: "Fyllda rutor: {filled} av {required}", currentComplete: "Den nuvarande layouten är komplett och används som miniminivå.", currentIncomplete: "Fyll ytterligare {missing} ruta/rutor för att använda den nuvarande layouten.",
+    currentTooManyColor: "Den nuvarande layouten använder fler {color}-stenar än vad som angetts i lagret.", currentSummary: "Nuvarande resultat", comparisonCurrent: "Nuvarande layout", comparisonFound: "Bästa resultat", improvementFound: "Förbättring hittad.",
+    noImprovement: "Ingen bättre layout hittades. Din nuvarande layout förblir den bästa kända lösningen.", equivalentFound: "Ett likvärdigt alternativ hittades. Din nuvarande layout är inte sämre.", currentRequired: "Nuvarande layout är aktiverad men ofullständig eller matchar inte lagret.",
+    searchMode: "Sökläge", quick: "Snabb", intensive: "Intensiv", optimizingQuick: "Snabbsökning pågår…", optimizingIntensive: "Intensiv sökning pågår… vänta.", currentUsed: "Nuvarande layout använd som startpunkt: Ja", currentNotUsed: "Nuvarande layout använd som startpunkt: Nej"
+  },
+  ko: {
+    searchModeLabel: "검색 모드", quickSearch: "빠른 검색", quickSearchHint: "약 0.5초", intensiveSearch: "집중 검색", intensiveSearchHint: "최대 8초, 더 정밀한 검색",
+    useCurrentLayout: "현재 배치 입력(선택)", useCurrentLayoutHint: "선택하지 않으면 보유한 보석 수량만으로 계산합니다.", currentLayoutTitle: "현재 배치", currentLayoutInstruction: "색상을 선택하고 해당 칸을 누르세요. 칸을 지우려면 ‘비우기’를 사용하세요.",
+    paletteLabel: "색상 선택", empty: "비우기", clearLayout: "배치 지우기", currentProgress: "채운 칸: {filled}/{required}", currentComplete: "현재 배치가 완성되어 최소 기준으로 사용됩니다.", currentIncomplete: "현재 배치를 사용하려면 {missing}칸을 더 채우세요.",
+    currentTooManyColor: "현재 배치의 {color} 보석 수가 입력한 보유량보다 많습니다.", currentSummary: "현재 결과", comparisonCurrent: "현재 배치", comparisonFound: "최고 결과", improvementFound: "개선된 배치를 찾았습니다.",
+    noImprovement: "더 나은 배치를 찾지 못했습니다. 현재 배치가 알려진 최선의 해로 유지됩니다.", equivalentFound: "동일한 수준의 대안을 찾았습니다. 현재 배치가 더 나쁘지 않습니다.", currentRequired: "현재 배치 옵션이 켜져 있지만 배치가 불완전하거나 보유량과 맞지 않습니다.",
+    searchMode: "검색 모드", quick: "빠름", intensive: "집중", optimizingQuick: "빠른 검색 중…", optimizingIntensive: "집중 검색 중… 잠시 기다려 주세요.", currentUsed: "현재 배치를 시작점으로 사용: 예", currentNotUsed: "현재 배치를 시작점으로 사용: 아니요"
+  },
+  ja: {
+    searchModeLabel: "検索モード", quickSearch: "クイック検索", quickSearchHint: "約0.5秒", intensiveSearch: "集中検索", intensiveSearchHint: "最大8秒、より詳しく検索",
+    useCurrentLayout: "現在の配置を入力（任意）", useCurrentLayoutHint: "チェックしない場合、所持ストーン数だけで計算します。", currentLayoutTitle: "現在の配置", currentLayoutInstruction: "色を選び、対応するマスをタップしてください。「空」でマスを消去できます。",
+    paletteLabel: "色を選択", empty: "空", clearLayout: "配置を消去", currentProgress: "入力済み：{filled}/{required}マス", currentComplete: "現在の配置は完成しており、最低基準として使用されます。", currentIncomplete: "現在の配置を使用するには、あと{missing}マス入力してください。",
+    currentTooManyColor: "現在の配置では、所持数より多い{color}ストーンが使われています。", currentSummary: "現在の結果", comparisonCurrent: "現在の配置", comparisonFound: "最良の結果", improvementFound: "改善案が見つかりました。",
+    noImprovement: "より良い配置は見つかりませんでした。現在の配置が既知の最良解です。", equivalentFound: "同等の別案が見つかりました。現在の配置は劣っていません。", currentRequired: "現在の配置が有効ですが、未完成または所持数と一致していません。",
+    searchMode: "検索モード", quick: "クイック", intensive: "集中", optimizingQuick: "クイック検索中…", optimizingIntensive: "集中検索中…しばらくお待ちください。", currentUsed: "現在の配置を開始点に使用：はい", currentNotUsed: "現在の配置を開始点に使用：いいえ"
+  },
+  zh: {
+    searchModeLabel: "搜索模式", quickSearch: "快速搜索", quickSearchHint: "约0.5秒", intensiveSearch: "深度搜索", intensiveSearchHint: "最多8秒，搜索更充分",
+    useCurrentLayout: "输入当前布局（可选）", useCurrentLayoutHint: "不勾选时，仅根据宝石库存进行计算。", currentLayoutTitle: "当前布局", currentLayoutInstruction: "选择颜色并点击对应格子。使用“空”可清除格子。",
+    paletteLabel: "选择颜色", empty: "空", clearLayout: "清空布局", currentProgress: "已填格子：{filled}/{required}", currentComplete: "当前布局已完整，将作为最低标准使用。", currentIncomplete: "还需填写{missing}个格子才能使用当前布局。",
+    currentTooManyColor: "当前布局使用的{color}宝石超过了输入的库存数量。", currentSummary: "当前结果", comparisonCurrent: "当前布局", comparisonFound: "最佳结果", improvementFound: "找到更优布局。",
+    noImprovement: "未找到更好的布局。当前布局仍是已知最佳方案。", equivalentFound: "找到同等强度的替代布局。当前布局并不更差。", currentRequired: "已启用当前布局，但布局不完整或与库存不符。",
+    searchMode: "搜索模式", quick: "快速", intensive: "深度", optimizingQuick: "正在快速搜索…", optimizingIntensive: "正在深度搜索…请稍候。", currentUsed: "使用当前布局作为起点：是", currentNotUsed: "使用当前布局作为起点：否"
+  }
+};
+
+for (const [language, additions] of Object.entries(featureTranslations)) {
+  if (translations[language]) Object.assign(translations[language], additions);
+}
+
+
 function readStoredLanguage() {
   try {
     return localStorage.getItem("bkryLanguage");
@@ -1026,7 +1235,7 @@ let currentLanguage = readStoredLanguage() ||
 if (!translations[currentLanguage]) currentLanguage = "en";
 
 function tr(key) {
-  return translations[currentLanguage][key] || translations.de[key] || key;
+  return translations[currentLanguage][key] || translations.en[key] || translations.de[key] || key;
 }
 function fmt(template, values) {
   return template.replace(/\{(\w+)\}/g, (_, key) => values[key] ?? `{${key}}`);
@@ -1057,12 +1266,25 @@ function applyLanguage(lang) {
   document.getElementById("goalFocus").textContent = tr("goalFocus");
   document.getElementById("goalPercent").textContent = tr("goalPercent");
   document.getElementById("inventoryHint").textContent = tr("inventoryHint");
+  document.getElementById("searchModeLabel").textContent = tr("searchModeLabel");
+  document.getElementById("quickSearchLabel").textContent = tr("quickSearch");
+  document.getElementById("quickSearchHint").textContent = tr("quickSearchHint");
+  document.getElementById("intensiveSearchLabel").textContent = tr("intensiveSearch");
+  document.getElementById("intensiveSearchHint").textContent = tr("intensiveSearchHint");
+  document.getElementById("useCurrentLayoutLabel").textContent = tr("useCurrentLayout");
+  document.getElementById("useCurrentLayoutHint").textContent = tr("useCurrentLayoutHint");
+  document.getElementById("currentLayoutTitle").textContent = tr("currentLayoutTitle");
+  document.getElementById("currentLayoutInstruction").textContent = tr("currentLayoutInstruction");
+  document.getElementById("paletteLabel").textContent = tr("paletteLabel");
+  document.getElementById("emptyPaletteButton").textContent = `${emoji.E} ${tr("empty")}`;
+  document.getElementById("clearCurrentButton").textContent = tr("clearLayout");
   document.getElementById("solveButton").textContent = tr("optimize");
   document.getElementById("copyButton").textContent = tr("copy");
   document.getElementById("bestLayoutTitle").textContent = tr("bestLayout");
   document.getElementById("discordOutputTitle").textContent = tr("discordOutput");
   document.getElementById("solverNote").textContent = tr("heuristicWarning");
-  if (window.lastResult) renderResult(window.lastResult.result, window.lastResult.profile, window.lastResult.goal, window.lastResult.inventory);
+  updateCurrentLayoutDisplay();
+  if (window.lastResult) renderResult(window.lastResult.result, window.lastResult.profile, window.lastResult.goal, window.lastResult.inventory, window.lastResult.currentBaseline, window.lastResult.searchMode);
 }
 
 const ROWS = 5;
@@ -1070,9 +1292,10 @@ const COLS = 7;
 const CELLS = ROWS * COLS;
 const COLORS = ["R", "Y", "G", "P", "B"];
 
-const MAX_RESTARTS = 14;
-const MAX_ITERATIONS = 6000;
-const MAX_RUNTIME_MS = 500;
+const SEARCH_SETTINGS = {
+  quick: { maxRestarts: 18, maxIterations: 7000, maxRuntimeMs: 500 },
+  intensive: { maxRestarts: 300, maxIterations: 30000, maxRuntimeMs: 8000 }
+};
 
 const emoji = {
   R: "🟥",
@@ -1082,6 +1305,123 @@ const emoji = {
   B: "🟦",
   E: "⬛"
 };
+
+let currentLayoutGrid = Array(CELLS).fill("E");
+let selectedCurrentColor = "R";
+
+function countGridColors(grid) {
+  const counts = { R:0, Y:0, G:0, P:0, B:0 };
+  for (const stone of grid) {
+    if (counts[stone] !== undefined) counts[stone]++;
+  }
+  return counts;
+}
+
+function arraysEqual(left, right) {
+  return left.length === right.length && left.every((value, index) => value === right[index]);
+}
+
+function expectedGridStones(inventory) {
+  return Math.min(totalCount(inventory), CELLS);
+}
+
+function analyzeCurrentLayout(inventory, profile, goal) {
+  const used = countGridColors(currentLayoutGrid);
+  const filled = totalCount(used);
+  const required = expectedGridStones(inventory);
+  const excessiveColor = COLORS.find(color => used[color] > inventory[color]);
+  const complete = !excessiveColor && filled === required;
+  const evaluation = evaluateLayout(currentLayoutGrid, profile, goal);
+
+  return { used, filled, required, excessiveColor, complete, evaluation };
+}
+
+function currentStateFromLayout(inventory) {
+  const used = countGridColors(currentLayoutGrid);
+  const reserve = {};
+  for (const color of COLORS) reserve[color] = inventory[color] - used[color];
+  return { grid: [...currentLayoutGrid], reserve };
+}
+
+function renderCurrentGrid() {
+  const gridElement = document.getElementById("currentGrid");
+  if (!gridElement) return;
+  gridElement.innerHTML = "";
+
+  currentLayoutGrid.forEach((stone, index) => {
+    const cell = document.createElement("div");
+    cell.className = `cell ${stone}`;
+    cell.textContent = emoji[stone];
+    cell.setAttribute("role", "button");
+    cell.setAttribute("tabindex", "0");
+    cell.setAttribute("aria-label", `${index + 1}: ${stone}`);
+
+    const applyColor = () => {
+      currentLayoutGrid[index] = selectedCurrentColor;
+      renderCurrentGrid();
+      updateCurrentLayoutDisplay();
+    };
+
+    cell.addEventListener("click", applyColor);
+    cell.addEventListener("keydown", event => {
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        applyColor();
+      }
+    });
+    gridElement.appendChild(cell);
+  });
+}
+
+function updatePaletteSelection() {
+  document.querySelectorAll("#currentPalette button").forEach(button => {
+    button.classList.toggle("selected", button.dataset.color === selectedCurrentColor);
+  });
+}
+
+function updateCurrentLayoutDisplay() {
+  const panel = document.getElementById("currentLayoutPanel");
+  const checkbox = document.getElementById("useCurrentLayout");
+  if (!panel || !checkbox) return;
+  panel.classList.toggle("hidden", !checkbox.checked);
+  updatePaletteSelection();
+
+  if (!checkbox.checked) return;
+
+  let inventory;
+  try {
+    inventory = readCounts();
+    validateCounts(inventory);
+  } catch {
+    return;
+  }
+
+  const profile = document.getElementById("profile").value;
+  const goal = document.getElementById("goal").value;
+  const analysis = analyzeCurrentLayout(inventory, profile, goal);
+  const status = document.getElementById("currentLayoutStatus");
+  const summary = document.getElementById("currentLayoutSummary");
+
+  let message = fmt(tr("currentProgress"), { filled: analysis.filled, required: analysis.required });
+  status.className = "current-status";
+
+  if (analysis.excessiveColor) {
+    message += `<br>${fmt(tr("currentTooManyColor"), { color: `${emoji[analysis.excessiveColor]} ${analysis.excessiveColor}` })}`;
+    status.classList.add("error");
+  } else if (analysis.complete) {
+    message += `<br>${tr("currentComplete")}`;
+    status.classList.add("ok");
+  } else {
+    const missing = Math.max(0, analysis.required - analysis.filled);
+    message += `<br>${fmt(tr("currentIncomplete"), { missing })}`;
+  }
+  status.innerHTML = message;
+
+  summary.innerHTML = `<b>${tr("currentSummary")}:</b> ` +
+    `${tr("activeBonuses")}: ${analysis.evaluation.activeCount} &nbsp; | &nbsp; ` +
+    `${tr("activePercent")}: ${analysis.evaluation.rawBonusTotal} &nbsp; | &nbsp; ` +
+    `${tr("profileScore")}: ${analysis.evaluation.relevanceScore}`;
+}
 
 const bonuses = [
   { key:"archerDef10V", orientation:"V", sequence:"RYP", value:10, group:"arch" },
@@ -1429,80 +1769,78 @@ function cacheKey(inventory, profile, goal) {
     `|${profile}|${goal}`;
 }
 
-function optimizeLayout(inventory, profile, goal) {
+async function optimizeLayout(inventory, profile, goal, searchMode, baselineState = null) {
+  const settings = SEARCH_SETTINGS[searchMode] || SEARCH_SETTINGS.quick;
   const startTime = performance.now();
   const key = cacheKey(inventory, profile, goal);
 
-  let globalBestState = bestCache.has(key)
-    ? cloneState(bestCache.get(key).state)
-    : null;
+  let globalBestState = null;
+  let globalBestEvaluation = null;
 
-  let globalBestEvaluation = bestCache.has(key)
-    ? evaluateLayout(globalBestState.grid, profile, goal)
-    : null;
+  if (baselineState) {
+    globalBestState = cloneState(baselineState);
+    globalBestEvaluation = evaluateLayout(globalBestState.grid, profile, goal);
+  }
+
+  if (bestCache.has(key)) {
+    const cachedState = cloneState(bestCache.get(key).state);
+    const cachedEvaluation = evaluateLayout(cachedState.grid, profile, goal);
+    if (compareRank(cachedEvaluation.rank, globalBestEvaluation && globalBestEvaluation.rank) > 0) {
+      globalBestState = cachedState;
+      globalBestEvaluation = cachedEvaluation;
+    }
+  }
 
   let completedRestarts = 0;
   let completedIterations = 0;
+  let lastYield = performance.now();
 
-  for (let restart = 0; restart < MAX_RESTARTS; restart++) {
-    if (performance.now() - startTime >= MAX_RUNTIME_MS) break;
+  for (let restart = 0; restart < settings.maxRestarts; restart++) {
+    if (performance.now() - startTime >= settings.maxRuntimeMs) break;
 
     let currentState;
-
     if (restart === 0 && globalBestState) {
       currentState = cloneState(globalBestState);
+    } else if (baselineState && restart % 5 === 1) {
+      currentState = mutateState(cloneState(baselineState));
     } else if (restart % 2 === 0) {
       currentState = createConstructiveState(inventory, profile, goal);
     } else {
       currentState = createRandomState(inventory);
     }
 
-    let currentEvaluation = evaluateLayout(
-      currentState.grid,
-      profile,
-      goal
-    );
+    let currentEvaluation = evaluateLayout(currentState.grid, profile, goal);
 
-    if (compareRank(
-      currentEvaluation.rank,
-      globalBestEvaluation && globalBestEvaluation.rank
-    ) > 0) {
+    if (compareRank(currentEvaluation.rank, globalBestEvaluation && globalBestEvaluation.rank) > 0) {
       globalBestState = cloneState(currentState);
       globalBestEvaluation = currentEvaluation;
     }
 
-    for (let iteration = 0; iteration < MAX_ITERATIONS; iteration++) {
-      if (performance.now() - startTime >= MAX_RUNTIME_MS) break;
-
+    for (let iteration = 0; iteration < settings.maxIterations; iteration++) {
+      if (performance.now() - startTime >= settings.maxRuntimeMs) break;
       completedIterations++;
 
       const candidateState = mutateState(currentState);
-      const candidateEvaluation = evaluateLayout(
-        candidateState.grid,
-        profile,
-        goal
-      );
-
+      const candidateEvaluation = evaluateLayout(candidateState.grid, profile, goal);
       const currentSearchScore = annealingScore(currentEvaluation, goal);
       const candidateSearchScore = annealingScore(candidateEvaluation, goal);
       const delta = candidateSearchScore - currentSearchScore;
-      const progress = iteration / MAX_ITERATIONS;
-      const temperature = Math.max(0.15, 3.0 * (1 - progress));
+      const progress = Math.min(1, (performance.now() - startTime) / settings.maxRuntimeMs);
+      const temperature = Math.max(0.12, 3.2 * (1 - progress));
 
-      if (
-        delta >= 0 ||
-        Math.random() < Math.exp(delta / temperature)
-      ) {
+      if (delta >= 0 || Math.random() < Math.exp(delta / temperature)) {
         currentState = candidateState;
         currentEvaluation = candidateEvaluation;
       }
 
-      if (compareRank(
-        candidateEvaluation.rank,
-        globalBestEvaluation && globalBestEvaluation.rank
-      ) > 0) {
+      if (compareRank(candidateEvaluation.rank, globalBestEvaluation && globalBestEvaluation.rank) > 0) {
         globalBestState = cloneState(candidateState);
         globalBestEvaluation = candidateEvaluation;
+      }
+
+      if (performance.now() - lastYield > 70) {
+        await new Promise(resolve => requestAnimationFrame(resolve));
+        lastYield = performance.now();
       }
     }
 
@@ -1548,16 +1886,19 @@ function validateCounts(counts) {
 
 window.lastResult = null;
 
-function renderResult(result, profile, goal, inventory) {
-  window.lastResult = { result, profile, goal, inventory };
+function renderResult(result, profile, goal, inventory, currentBaseline = null, searchMode = "quick") {
+  window.lastResult = { result, profile, goal, inventory, currentBaseline, searchMode };
   const gridElement = document.getElementById("grid");
   const bonusElement = document.getElementById("bonuses");
   const scoreElement = document.getElementById("score");
   const shareElement = document.getElementById("share");
   const statusElement = document.getElementById("status");
+  const comparisonElement = document.getElementById("comparison");
 
   gridElement.innerHTML = "";
   bonusElement.innerHTML = "";
+  comparisonElement.innerHTML = "";
+  comparisonElement.className = "";
 
   for (const stone of result.grid) {
     const cell = document.createElement("div");
@@ -1571,57 +1912,64 @@ function renderResult(result, profile, goal, inventory) {
     ` &nbsp; | &nbsp; <b>${tr("activePercent")}:</b> ${result.evaluation.rawBonusTotal}` +
     ` &nbsp; | &nbsp; <b>${tr("profileScore")}:</b> ${result.evaluation.relevanceScore}`;
 
-  const used = { R:0, Y:0, G:0, P:0, B:0 };
-  result.grid.forEach(stone => {
-    if (used[stone] !== undefined) used[stone]++;
-  });
+  if (currentBaseline) {
+    const currentEvaluation = evaluateLayout(currentBaseline.grid, profile, goal);
+    const rankComparison = compareRank(result.evaluation.rank, currentEvaluation.rank);
+    const sameGrid = arraysEqual(result.grid, currentBaseline.grid);
+    let conclusion;
+    let className;
 
+    if (rankComparison > 0) {
+      conclusion = tr("improvementFound");
+      className = "comparison good";
+    } else if (sameGrid) {
+      conclusion = tr("noImprovement");
+      className = "comparison neutral";
+    } else {
+      conclusion = tr("equivalentFound");
+      className = "comparison neutral";
+    }
+
+    comparisonElement.className = className;
+    comparisonElement.innerHTML =
+      `<b>${tr("comparisonCurrent")}:</b> ${currentEvaluation.activeCount} / ${currentEvaluation.rawBonusTotal} / ${currentEvaluation.relevanceScore}<br>` +
+      `<b>${tr("comparisonFound")}:</b> ${result.evaluation.activeCount} / ${result.evaluation.rawBonusTotal} / ${result.evaluation.relevanceScore}<br>` +
+      `<b>${conclusion}</b>`;
+  }
+
+  const used = countGridColors(result.grid);
   const usedText = COLORS.map(color => `${emoji[color]} ${used[color]}`).join("  ");
-  const reserveText = COLORS.map(color =>
-    `${emoji[color]} ${Math.max(0, inventory[color] - used[color])}`
-  ).join("  ");
+  const reserveText = COLORS.map(color => `${emoji[color]} ${Math.max(0, inventory[color] - used[color])}`).join("  ");
 
   document.getElementById("inventorySummary").innerHTML =
     `<b>${tr("usedStones")}:</b> ${usedText}<br>` +
     `<b>${tr("reserveStones")}:</b> ${reserveText}`;
 
   let bonusHtml = `<h3>${tr("overview")}</h3>`;
-
   bonuses.forEach((bonus, index) => {
     const enabled = result.evaluation.active[index];
-
-    bonusHtml +=
-      `<div class="bonus ${enabled ? "on" : "off"}">` +
-      `${enabled ? "✅" : "—"} ${tr(bonus.key)}` +
-      `</div>`;
+    bonusHtml += `<div class="bonus ${enabled ? "on" : "off"}">` +
+      `${enabled ? "✅" : "—"} ${tr(bonus.key)}</div>`;
   });
-
   bonusElement.innerHTML = bonusHtml;
 
   const shareLines = [
-    "**BKRY Solver v1.4 Beta**",
+    "**BKRY Solver v1.5 Beta**",
     `**${tr("mainTroop")}:** ${profileName(profile)}`,
     `**${tr("goalLabel")}:** ${tr(goal === "count" ? "goalCount" : goal === "focus" ? "goalFocus" : "goalPercent")}`,
+    `**${tr("searchMode")}:** ${tr(searchMode === "intensive" ? "intensive" : "quick")}`,
+    `**${currentBaseline ? tr("currentUsed") : tr("currentNotUsed")}**`,
     ""
   ];
 
   for (let row = 0; row < ROWS; row++) {
-    const rowSymbols = result.grid
-      .slice(row * COLS, (row + 1) * COLS)
-      .map(stone => emoji[stone])
-      .join("");
-
-    shareLines.push(rowSymbols);
+    shareLines.push(result.grid.slice(row * COLS, (row + 1) * COLS).map(stone => emoji[stone]).join(""));
   }
 
   shareLines.push("", `**${tr("activeBonuses")}:**`);
-
   bonuses.forEach((bonus, index) => {
-    if (result.evaluation.active[index]) {
-      shareLines.push(`✅ ${tr(bonus.key)}`);
-    }
+    if (result.evaluation.active[index]) shareLines.push(`✅ ${tr(bonus.key)}`);
   });
-
   shareElement.value = shareLines.join("\n");
 
   statusElement.textContent = fmt(tr("finished"), {
@@ -1631,38 +1979,37 @@ function renderResult(result, profile, goal, inventory) {
   });
 }
 
-function solve() {
+async function solve() {
   const statusElement = document.getElementById("status");
+  const solveButton = document.getElementById("solveButton");
 
   try {
-    statusElement.textContent = tr("optimizing");
+    const counts = readCounts();
+    validateCounts(counts);
+    const profile = document.getElementById("profile").value;
+    const goal = document.getElementById("goal").value;
+    const searchMode = document.querySelector('input[name="searchMode"]:checked').value;
+    const useCurrent = document.getElementById("useCurrentLayout").checked;
+    let baselineState = null;
 
-    /*
-      requestAnimationFrame lässt den Browser zunächst die Statusanzeige zeichnen.
-      Die eigentliche Suche bleibt durch das 500-ms-Zeitlimit kurz.
-    */
-    requestAnimationFrame(() => {
-      try {
-        const counts = readCounts();
-        validateCounts(counts);
+    if (useCurrent) {
+      const analysis = analyzeCurrentLayout(counts, profile, goal);
+      if (!analysis.complete) throw new Error(tr("currentRequired"));
+      baselineState = currentStateFromLayout(counts);
+    }
 
-        const profile = document.getElementById("profile").value;
-        const goal = document.getElementById("goal").value;
-        const result = optimizeLayout(counts, profile, goal);
+    statusElement.textContent = tr(searchMode === "intensive" ? "optimizingIntensive" : "optimizingQuick");
+    solveButton.disabled = true;
+    await new Promise(resolve => requestAnimationFrame(resolve));
 
-        if (!result.grid || !result.evaluation) {
-          throw new Error(tr("noLayout"));
-        }
-
-        renderResult(result, profile, goal, counts);
-      } catch (error) {
-        statusElement.textContent = "";
-        alert(error.message);
-      }
-    });
+    const result = await optimizeLayout(counts, profile, goal, searchMode, baselineState);
+    if (!result.grid || !result.evaluation) throw new Error(tr("noLayout"));
+    renderResult(result, profile, goal, counts, baselineState, searchMode);
   } catch (error) {
     statusElement.textContent = "";
     alert(error.message);
+  } finally {
+    solveButton.disabled = false;
   }
 }
 
@@ -1688,7 +2035,24 @@ document.getElementById("copyButton").addEventListener("click", copyShareText);
 document.getElementById("languageSelect").addEventListener("change", event => {
   applyLanguage(event.target.value);
 });
+document.getElementById("useCurrentLayout").addEventListener("change", updateCurrentLayoutDisplay);
+document.getElementById("clearCurrentButton").addEventListener("click", () => {
+  currentLayoutGrid = Array(CELLS).fill("E");
+  renderCurrentGrid();
+  updateCurrentLayoutDisplay();
+});
+document.querySelectorAll("#currentPalette button").forEach(button => {
+  button.addEventListener("click", () => {
+    selectedCurrentColor = button.dataset.color;
+    updatePaletteSelection();
+  });
+});
+["R","Y","G","P","B","profile","goal"].forEach(id => {
+  document.getElementById(id).addEventListener("input", updateCurrentLayoutDisplay);
+  document.getElementById(id).addEventListener("change", updateCurrentLayoutDisplay);
+});
 
+renderCurrentGrid();
 applyLanguage(currentLanguage);
 solve();
 </script>
@@ -1703,7 +2067,7 @@ border-top:1px solid #333;
 <strong>BKRY Hero Specialty Solver</strong><br>
 Made with ❤️ by <strong>BKRY</strong><br><br>
 © 2026 BKRY • All rights reserved<br>
-Version 1.4 • Beta
+Version 1.5 • Beta
 </footer>
 </body>
 </html>
